@@ -1,0 +1,11 @@
+cmake_minimum_required(VERSION 2.8)
+
+project(myTest)
+
+set(CMAKE_MODULE_PATH "/home/koorosh/Tools/petsc-3.6.3/cmake_files_for_PETSC")
+
+FIND_PACKAGE(PETSc)
+include_directories(${PETSC_INCLUDES})
+
+ADD_EXECUTABLE(myTest main.cpp)
+TARGET_LINK_LIBRARIES(myTest ${PETSC_LIBRARIES})
