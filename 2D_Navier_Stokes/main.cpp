@@ -3,6 +3,7 @@ static char help[] = "Solves the 2D incompressible laminar Navier-Stokes equatio
 #include <petscts.h>
 #include <iostream>
 #include <bits/algorithmfwd.h>
+#include <cmath>
 
 using namespace std;
 
@@ -17,6 +18,10 @@ void poseidonVhbarOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, Pets
 void poseidonVhtildeOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VhtildeOperator);
 void poseidonVvbarOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VvbarOperator);
 void poseidonVvtildeOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VvtildeOperator);
+void poseidondUdxOperator(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy, Mat &dUdxOperator);
+void poseidondUdyOperator(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy, Mat &dUdyOperator);
+void poseidondVdxOperator(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdxOperator);
+void poseidondVdyOperator(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdyOperator);
 
 int main(int argc, char **args) {
     /*
@@ -63,15 +68,15 @@ int main(int argc, char **args) {
     VecCreate(PETSC_COMM_WORLD, &V); VecSetSizes(V, PETSC_DECIDE, nVx * nVy); VecSetFromOptions(V);
     VecCreate(PETSC_COMM_WORLD, &P); VecSetSizes(P, PETSC_DECIDE, nPx * nPy); VecSetFromOptions(P);
 
-    VecCreate(PETSC_COMM_WORLD, &Uhbar); VecSetSizes(Uhbar, PETSC_DECIDE, (nUx - 1) * (nUy - 2)); VecSetFromOptions(Uhbar);
-    VecCreate(PETSC_COMM_WORLD, &Uvbar); VecSetSizes(Uvbar, PETSC_DECIDE, (nUx - 2) * (nUy - 1)); VecSetFromOptions(Uvbar);
-    VecCreate(PETSC_COMM_WORLD, &Uhtilde); VecSetSizes(Uhtilde, PETSC_DECIDE, (nUx - 1) * (nUy - 2)); VecSetFromOptions(Uhtilde);
-    VecCreate(PETSC_COMM_WORLD, &Uvtilde); VecSetSizes(Uvtilde, PETSC_DECIDE, (nUx - 2) * (nUy - 1)); VecSetFromOptions(Uvtilde);
+    VecCreate(PETSC_COMM_WORLD, &Uhbar); VecSetSizes(Uhbar, PETSC_DECIDE, (nUx - 1) * (nUy - 2)); VecSetFromOptions(Uhbar);  // fixed
+    VecCreate(PETSC_COMM_WORLD, &Uvbar); VecSetSizes(Uvbar, PETSC_DECIDE, nUx * (nUy - 1)); VecSetFromOptions(Uvbar); // fixed
+    VecCreate(PETSC_COMM_WORLD, &Uhtilde); VecSetSizes(Uhtilde, PETSC_DECIDE, (nUx - 1) * (nUy - 2)); VecSetFromOptions(Uhtilde);  // fixed
+    VecCreate(PETSC_COMM_WORLD, &Uvtilde); VecSetSizes(Uvtilde, PETSC_DECIDE, nUx * (nUy - 1)); VecSetFromOptions(Uvtilde); // fixed
 
-    VecCreate(PETSC_COMM_WORLD, &Vhbar); VecSetSizes(Vhbar, PETSC_DECIDE, (nVx - 1) * (nVy - 2)); VecSetFromOptions(Vhbar);
-    VecCreate(PETSC_COMM_WORLD, &Vvbar); VecSetSizes(Vvbar, PETSC_DECIDE, (nVx - 2) * (nVy - 1)); VecSetFromOptions(Vvbar);
-    VecCreate(PETSC_COMM_WORLD, &Vhtilde); VecSetSizes(Vhtilde, PETSC_DECIDE, (nVx - 1) * (nVy - 2)); VecSetFromOptions(Vhtilde);
-    VecCreate(PETSC_COMM_WORLD, &Vvtilde); VecSetSizes(Vvtilde, PETSC_DECIDE, (nVx - 2) * (nVy - 1)); VecSetFromOptions(Vvtilde);
+    VecCreate(PETSC_COMM_WORLD, &Vhbar); VecSetSizes(Vhbar, PETSC_DECIDE, (nVx - 1) * nVy); VecSetFromOptions(Vhbar); // fixed
+    VecCreate(PETSC_COMM_WORLD, &Vvbar); VecSetSizes(Vvbar, PETSC_DECIDE, (nVx - 2) * (nVy - 1)); VecSetFromOptions(Vvbar);  // fixed
+    VecCreate(PETSC_COMM_WORLD, &Vhtilde); VecSetSizes(Vhtilde, PETSC_DECIDE, (nVx - 1) * nVy); VecSetFromOptions(Vhtilde);  // fixed
+    VecCreate(PETSC_COMM_WORLD, &Vvtilde); VecSetSizes(Vvtilde, PETSC_DECIDE, (nVx - 2) * (nVy - 1)); VecSetFromOptions(Vvtilde);  // fixed
     /*
      * Track the boundary and interior indices for different variables
      */
@@ -93,8 +98,9 @@ int main(int argc, char **args) {
 //    PetscIntView(nPx * nPy - 2 * nPx - 2 * (nPy - 2), pInteriorIndex, PETSC_VIEWER_STDOUT_WORLD);
 
     /*
-     * Generate tilde and bar operators for treating nonlinear terms
+     * Calcualte Uhbar, Uhtitlde, ... operators for discretising the convective terms.
      */
+    // Initializing matrices for operators
     Mat UhbarOperator; Mat UhtildeOperator;
     Mat UvbarOperator; Mat UvtildeOperator;
     Mat VhbarOperator; Mat VhtildeOperator;
@@ -105,17 +111,17 @@ int main(int argc, char **args) {
     MatCreate(PETSC_COMM_WORLD, &VhbarOperator); MatCreate(PETSC_COMM_WORLD, &VhtildeOperator);
     MatCreate(PETSC_COMM_WORLD, &VvbarOperator); MatCreate(PETSC_COMM_WORLD, &VvtildeOperator);
 
-    MatSetSizes(UhbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 2), nUx * nUy);
-    MatSetSizes(UhtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 2), nUx * nUy);
+    MatSetSizes(UhbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 2), nUx * nUy);  // fixed
+    MatSetSizes(UhtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 2), nUx * nUy);  // fixed
 
-    MatSetSizes(UvbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 1), nUx * nUy);
-    MatSetSizes(UvtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 1), nUx * nUy);
+    MatSetSizes(UvbarOperator, PETSC_DECIDE, PETSC_DECIDE, nUx * (nUy - 1), nUx * nUy); //fixed
+    MatSetSizes(UvtildeOperator, PETSC_DECIDE, PETSC_DECIDE, nUx * (nUy - 1), nUx * nUy);  //fixed
 
-    MatSetSizes(VhbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 1) * (nVy - 2), nVx * nVy);
-    MatSetSizes(VhtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 1) * (nVy - 2), nVx * nVy);
+    MatSetSizes(VhbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 1) * nVy, nVx * nVy); // fixed
+    MatSetSizes(VhtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 1) * nVy, nVx * nVy); // fixed
 
-    MatSetSizes(VvbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 1), nVx * nVy);
-    MatSetSizes(VvtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 1), nVx * nVy);
+    MatSetSizes(VvbarOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 1), nVx * nVy);  // fixed
+    MatSetSizes(VvtildeOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 1), nVx * nVy);  // fixed
 
     MatSetFromOptions(UhbarOperator); MatSetFromOptions(UhtildeOperator);
     MatSetFromOptions(UvbarOperator); MatSetFromOptions(UvtildeOperator);
@@ -127,6 +133,7 @@ int main(int argc, char **args) {
     MatSetUp(VhbarOperator); MatSetUp(VhtildeOperator);
     MatSetUp(VvbarOperator); MatSetUp(VvtildeOperator);
 
+    // Generating operators
     poseidonUhbarOperator(nUx, nUy, nUinterior, uInteriorIndex, UhbarOperator);
     poseidonUhtildeOperator(nUx, nUy, nUinterior, uInteriorIndex, UhtildeOperator);
 
@@ -139,13 +146,29 @@ int main(int argc, char **args) {
     poseidonVvbarOperator(nVx, nVy, nVinterior, vInteriorIndex, VvbarOperator);
     poseidonVvtildeOperator(nVx, nVy, nVinterior, vInteriorIndex, VvtildeOperator);
 
-//    MatView(VvtildeOperator, PETSC_VIEWER_STDOUT_WORLD);
-    // Calculate Uhbar, Uhtilde, ...
-    MatMult(UhbarOperator, U, Uhbar); MatMult(UvbarOperator, U, Uvbar);
-    MatMult(UhtildeOperator, U, Uhtilde); MatMult(UvtildeOperator, U, Uvtilde);
-    MatMult(VhbarOperator, V, Vhbar); MatMult(VvbarOperator, V, Vvbar);
-    MatMult(VhtildeOperator, V, Vhtilde); MatMult(VvtildeOperator, V, Vvtilde);
+    /*
+     * Generate ddx and ddy operators
+     */
+    Mat dUdxOperator, dUdyOperator, dVdxOperator, dVdyOperator;
 
+    MatCreate(PETSC_COMM_WORLD, &dUdxOperator); MatCreate(PETSC_COMM_WORLD, &dUdyOperator);
+    MatCreate(PETSC_COMM_WORLD, &dVdxOperator); MatCreate(PETSC_COMM_WORLD, &dVdyOperator);
+
+    MatSetSizes(dUdxOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), (nUx - 1) * (nUy - 2));
+    MatSetSizes(dUdyOperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), nUx * (nUy - 1));
+    MatSetSizes(dVdxOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 2), (nVx - 1) * nVy);
+    MatSetSizes(dVdyOperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 2), (nVx - 2) * (nVy - 1));
+
+    MatSetFromOptions(dUdxOperator); MatSetFromOptions(dUdyOperator);
+    MatSetFromOptions(dVdxOperator); MatSetFromOptions(dVdyOperator);
+
+    MatSetUp(dUdxOperator); MatSetUp(dUdyOperator);
+    MatSetUp(dVdxOperator); MatSetUp(dVdyOperator);
+
+    poseidondUdxOperator(nUx, nUy, dx, dy, dUdxOperator);
+    poseidondUdyOperator(nUx, nUy, dx, dy, dUdyOperator);
+    poseidondVdxOperator(nVx, nVy, dx, dy, dVdxOperator);
+    poseidondVdyOperator(nVx, nVy, dx, dy, dVdyOperator);
     /*
      * Gamma calculation
      */
@@ -159,11 +182,92 @@ int main(int argc, char **args) {
     PetscReal gamma = PetscMin(1.2 * dt * PetscMax(maxUval, maxVval), 1); // Define gamma
     VecDestroy(&Uabs); VecDestroy(&Vabs);
 
-    VecPointwiseMult(Uhbar, Uhbar, Uhbar);
-    VecPointwiseMult(Uhbar, Uhtilde, Uhtilde);
-    VecPointwiseMult(Uvbar, Uhbar, Uhbar);
-    VecPointwiseMult(Vhbar, Uvtilde, Uhtilde);
-    VecAXPY(Uhbar, 1.0, Uhtilde);
+    /*
+     * Calculating the convective terms in x direction (U*)
+     */
+    MatMult(UhbarOperator, U, Uhbar); MatMult(UvbarOperator, U, Uvbar);
+    MatMult(UhtildeOperator, U, Uhtilde); MatMult(UvtildeOperator, U, Uvtilde);
+    MatMult(VhbarOperator, V, Vhbar); MatMult(VvbarOperator, V, Vvbar);
+    MatMult(VhtildeOperator, V, Vhtilde); MatMult(VvtildeOperator, V, Vvtilde);
+
+    Vec Uhbar2, UhbarXUhtitlde, UvbarXVhbar, VhbarXUvtilde, UhbarABS, VhbarABS;
+    Vec Uhbar2_gammaXUhbarXUhtilde, UvbarXVhbar_gammaXVhbarUvtilde;
+    Vec UvbarXVhtilde, Vvbar2, VvbarXVvtilde, UvbarABS, VvbarABS;
+    Vec UvbarVhbar_gammaXUvbarVhtilde, Vvbar2_gammaXVvbarXVvtilde;
+
+    Vec UstarRHSx, UstarRHSy;
+    Vec VstarRHSx, VstarRHSy;
+    Vec UstarRHS, VstarRHS;
+
+    VecDuplicate(Uhbar, &Uhbar2);
+    VecDuplicate(Uhbar, &UhbarXUhtitlde);
+    VecDuplicate(Uvbar, &UvbarXVhbar);
+    VecDuplicate(Vhbar, &VhbarXUvtilde);
+    VecDuplicate(Uhbar, &UhbarABS);
+    VecDuplicate(Vhbar, &VhbarABS);
+    VecDuplicate(Uhbar, &Uhbar2_gammaXUhbarXUhtilde);
+    VecDuplicate(Uvbar, &UvbarXVhbar_gammaXVhbarUvtilde);
+    VecDuplicate(Uvbar, &UvbarXVhtilde);
+    VecDuplicate(Vvbar, &Vvbar2);
+    VecDuplicate(Vvbar, &VvbarXVvtilde);
+    VecDuplicate(Uvbar, &UvbarABS);
+    VecDuplicate(Vvbar, &VvbarABS);
+    VecDuplicate(Uvbar, &UvbarVhbar_gammaXUvbarVhtilde);
+    VecDuplicate(Vvbar, &Vvbar2_gammaXVvbarXVvtilde);
+
+    VecCreate(PETSC_COMM_WORLD, &UstarRHSx); VecSetSizes(UstarRHSx, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UstarRHSx);
+    VecCreate(PETSC_COMM_WORLD, &UstarRHSy); VecSetSizes(UstarRHSy, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UstarRHSy);
+    VecCreate(PETSC_COMM_WORLD, &UstarRHS); VecSetSizes(UstarRHS, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UstarRHS);
+    VecCreate(PETSC_COMM_WORLD, &VstarRHSx); VecSetSizes(VstarRHSx, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VstarRHSx);
+    VecCreate(PETSC_COMM_WORLD, &VstarRHSy); VecSetSizes(VstarRHSy, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VstarRHSy);
+    VecCreate(PETSC_COMM_WORLD, &VstarRHS); VecSetSizes(VstarRHS, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VstarRHS);
+
+    VecAbs(UhbarABS);
+    VecAbs(VhbarABS);
+    VecAbs(UvbarABS);
+    VecAbs(VvbarABS);
+
+    VecPointwiseMult(Uhbar, Uhbar, Uhbar2);
+    VecPointwiseMult(UhbarABS, Uhtilde, UhbarXUhtitlde);
+    VecPointwiseMult(Uvbar, Vhbar, UvbarXVhbar);
+    VecPointwiseMult(VhbarABS, Uvtilde, VhbarXUvtilde);
+    VecPointwiseMult(Uvbar, Vhbar, UvbarXVhbar);
+    VecPointwiseMult(UvbarABS, Vhtilde, UvbarXVhtilde);
+    VecPointwiseMult(Vvbar, Vvbar, Vvbar2);
+    VecPointwiseMult(VvbarABS, Vvtilde, VvbarXVvtilde);
+
+    VecWAXPY(Uhbar2_gammaXUhbarXUhtilde, -gamma, UhbarXUhtitlde, Uhbar2);
+    VecWAXPY(UvbarXVhbar_gammaXVhbarUvtilde, -gamma, VhbarXUvtilde, UvbarXVhbar);
+    VecWAXPY(UvbarVhbar_gammaXUvbarVhtilde, -gamma, UvbarXVhtilde, UvbarXVhbar);
+    VecWAXPY(Vvbar2_gammaXVvbarXVvtilde, -gamma, VvbarXVvtilde, Vvbar2);
+
+    MatMult(dUdxOperator, Uhbar2_gammaXUhbarXUhtilde, UstarRHSx);
+    MatMult(dUdyOperator, UvbarXVhbar_gammaXVhbarUvtilde, UstarRHSy);
+    MatMult(dVdxOperator, UvbarVhbar_gammaXUvbarVhtilde, VstarRHSx);
+    MatMult(dVdyOperator, Vvbar2_gammaXVvbarXVvtilde, VstarRHSy);
+
+    VecWAXPY(UstarRHS, 1, UstarRHSx, UstarRHSy);
+    VecWAXPY(VstarRHS, 1, VstarRHSx, VstarRHSy);
+
+    VecScale(VstarRHS, -1.0 * dt);
+    VecScale(UstarRHS, -1.0 * dt);
+
+    PetscScalar *UstarRHS_array, *VstarRHS_array;
+
+    VecGetArray(UstarRHS, &UstarRHS_array);
+    VecGetArray(VstarRHS, &VstarRHS_array);
+    VecSetValues(U, nUinterior, uInteriorIndex, UstarRHS_array, ADD_VALUES);
+    VecSetValues(V, nVinterior, vInteriorIndex, VstarRHS_array, ADD_VALUES);
+//    PetscInt vecSize, vecSize1, vecSize2;
+//    VecGetSize(UstarRHS, &vecSize);
+//    MatGetSize(dVdxOperator, &vecSize1, &vecSize2);
+//    cout << vecSize  << endl;
+//    cout << vecSize << "\t\t" << vecSize1 << "\t\t" << vecSize2 << endl;
+//    VecWAXPY(UstarRHS, 1.0, Uhbar2_gammaXUhbarXUhtilde, UvbarXVhbar_gammaXVhbarUvtilde);
+//    VecPointwiseMult(Uvbar, Vhbar, Vhbar);
+//    VecPointwiseMult(Vhbar, Uvtilde, Uvtilde);
+//    VecAXPY(Uhbar, 1.0, Uvtilde);
+
 //    PetscInt myLoc[3] = {1, 2, 3};
 //    PetscScalar *myArray;
 //    VecGetArray(Uhtilde, &myArray);
@@ -182,6 +286,9 @@ int main(int argc, char **args) {
     MatDestroy(&UvbarOperator); MatDestroy(&UvtildeOperator);
     MatDestroy(&VhbarOperator); MatDestroy(&VhtildeOperator);
     MatDestroy(&VvbarOperator); MatDestroy(&VvtildeOperator);
+
+    MatDestroy(&dUdxOperator); MatDestroy(&dUdyOperator);
+    MatDestroy(&dVdxOperator); MatDestroy(&dVdyOperator);
     PetscFinalize();
     return 0;
 }
@@ -296,7 +403,7 @@ void poseidonUhbarOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, Pets
     }
     MatAssemblyBegin(UhbarOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(UhbarOperator, MAT_FINAL_ASSEMBLY);
-}
+}  // fixed
 
 void poseidonUhtildeOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, PetscInt *uInteriorIndex, Mat &UhtildeOperator) {
     PetscInt barOperatorPosition[2]; // values that go inside the $\bar{ }$ operator
@@ -328,23 +435,16 @@ void poseidonUvbarOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, Pets
     PetscInt rowIndex = 0;
     barOperatorValue[0] = 0.5;
     barOperatorValue[1] = 0.5;
-    for (int i = 0; i < nUinterior; i++) {
-        barOperatorPosition[0] = uInteriorIndex[i] - nUx;
-        barOperatorPosition[1] = uInteriorIndex[i];
+    for (int i = 0; i < nUx * (nUy - 1); i++) {
+        barOperatorPosition[0] = i;
+        barOperatorPosition[1] = i + nUx;
 //        cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
         MatSetValues(UvbarOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        if (uInteriorIndex[i] + 2 * nUx > nUx * nUy) {
-            rowIndex++;
-            barOperatorPosition[0] = uInteriorIndex[i];
-            barOperatorPosition[1] = uInteriorIndex[i] + nUx;
-//            cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
-            MatSetValues(UvbarOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        }
         rowIndex++;
     }
     MatAssemblyBegin(UvbarOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(UvbarOperator, MAT_FINAL_ASSEMBLY);
-}
+} // fixed
 
 void poseidonUvtildeOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, PetscInt *uInteriorIndex, Mat &UvtildeOperator) {
     PetscInt barOperatorPosition[2]; // values that go inside the $\bar{ }$ operator
@@ -352,23 +452,16 @@ void poseidonUvtildeOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, Pe
     PetscInt rowIndex = 0;
     barOperatorValue[0] = -0.5;
     barOperatorValue[1] = 0.5;
-    for (int i = 0; i < nUinterior; i++) {
-        barOperatorPosition[0] = uInteriorIndex[i] - nUx;
-        barOperatorPosition[1] = uInteriorIndex[i];
+    for (int i = 0; i < nUx * (nUy - 1); i++) {
+        barOperatorPosition[0] = i;
+        barOperatorPosition[1] = i + nUx;
 //        cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
         MatSetValues(UvtildeOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        if (uInteriorIndex[i] + 2 * nUx > nUx * nUy) {
-            rowIndex++;
-            barOperatorPosition[0] = uInteriorIndex[i];
-            barOperatorPosition[1] = uInteriorIndex[i] + nUx;
-//            cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
-            MatSetValues(UvtildeOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        }
         rowIndex++;
     }
     MatAssemblyBegin(UvtildeOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(UvtildeOperator, MAT_FINAL_ASSEMBLY);
-}
+} // fixed
 
 void poseidonVhbarOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VhbarOperator) {
     PetscInt barOperatorPosition[2]; // values that go inside the $\bar{ }$ operator
@@ -376,23 +469,19 @@ void poseidonVhbarOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, Pets
     PetscInt rowIndex = 0;
     barOperatorValue[0] = 0.5;
     barOperatorValue[1] = 0.5;
-    for (int i = 0; i < nVinterior; i++) {
-        barOperatorPosition[0] = vInteriorIndex[i] - 1;
-        barOperatorPosition[1] = vInteriorIndex[i];
+    for (PetscInt i = 0; i < nVx * nVy; i++) {
+        if (fmod(i, nVx) == nVx - 1) {
+            continue;
+        }
+        barOperatorPosition[0] = i;
+        barOperatorPosition[1] = i + 1;
 //        cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
         MatSetValues(VhbarOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        if (vInteriorIndex[i + 1] - vInteriorIndex[i] != 1) {
-            rowIndex++;
-            barOperatorPosition[0] = vInteriorIndex[i];
-            barOperatorPosition[1] = vInteriorIndex[i] + 1;
-//            cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
-            MatSetValues(VhbarOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        }
         rowIndex++;
     }
     MatAssemblyBegin(VhbarOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(VhbarOperator, MAT_FINAL_ASSEMBLY);
-}
+} // fixed
 
 void poseidonVhtildeOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VhtildeOperator) {
     PetscInt barOperatorPosition[2]; // values that go inside the $\bar{ }$ operator
@@ -400,23 +489,19 @@ void poseidonVhtildeOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, Pe
     PetscInt rowIndex = 0;
     barOperatorValue[0] = -0.5;
     barOperatorValue[1] = 0.5;
-    for (int i = 0; i < nVinterior; i++) {
-        barOperatorPosition[0] = vInteriorIndex[i] - 1;
-        barOperatorPosition[1] = vInteriorIndex[i];
+    for (int i = 0; i < nVx * nVy; i++) {
+        if (fmod(i, nVx) == nVx - 1) {
+            continue;
+        }
+        barOperatorPosition[0] = i;
+        barOperatorPosition[1] = i + 1;
 //        cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
         MatSetValues(VhtildeOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        if (vInteriorIndex[i + 1] - vInteriorIndex[i] != 1) {
-            rowIndex++;
-            barOperatorPosition[0] = vInteriorIndex[i];
-            barOperatorPosition[1] = vInteriorIndex[i] + 1;
-//            cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
-            MatSetValues(VhtildeOperator, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
-        }
         rowIndex++;
     }
     MatAssemblyBegin(VhtildeOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(VhtildeOperator, MAT_FINAL_ASSEMBLY);
-}
+}  // fixed
 
 void poseidonVvbarOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VvbarOperator) {
     PetscInt barOperatorPosition[2]; // values that go inside the $\bar{ }$ operator
@@ -440,7 +525,7 @@ void poseidonVvbarOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, Pets
     }
     MatAssemblyBegin(VvbarOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(VvbarOperator, MAT_FINAL_ASSEMBLY);
-}
+}  // fixed
 
 void poseidonVvtildeOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, PetscInt *vInteriorIndex, Mat &VvtildeOperator) {
     PetscInt barOperatorPosition[2]; // values that go inside the $\bar{ }$ operator
@@ -464,4 +549,104 @@ void poseidonVvtildeOperator(PetscInt nVx, PetscInt nVy, PetscInt nVinterior, Pe
     }
     MatAssemblyBegin(VvtildeOperator, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(VvtildeOperator, MAT_FINAL_ASSEMBLY);
+}  // fixed
+
+void poseidondUdxOperator(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy, Mat &dUdxOperator) {
+    PetscInt operatorPosition[2];
+    PetscScalar operatorValue[2];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    MatGetSize(dUdxOperator, &matRow, &matColumn);
+    operatorValue[0] = -1.0 / dx;
+    operatorValue[1] = 1.0 / dx;
+    for (int i = 0; i < matColumn; i++) {
+        if ((fmod(i, nUx - 1) == nUx - 2)) {
+            continue;
+        }
+        operatorPosition[0] = i;
+        operatorPosition[1] = i + 1;
+//        cout << rowIndex << "\t" << operatorPosition[0] << "\t" << operatorPosition[1] << endl;
+        MatSetValues(dUdxOperator, 1, &rowIndex, 2, operatorPosition, operatorValue, INSERT_VALUES);
+        rowIndex++;
+    }
+    MatAssemblyBegin(dUdxOperator, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(dUdxOperator, MAT_FINAL_ASSEMBLY);
+}
+
+void poseidondUdyOperator(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy, Mat &dUdyOperator) {
+    PetscInt operatorPosition[2];
+    PetscScalar operatorValue[2];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    MatGetSize(dUdyOperator, &matRow, &matColumn);
+    operatorValue[0] = -1.0 / dy;
+    operatorValue[1] = 1.0 / dy;
+    for (int i = 0; i < matColumn; i++) {
+        if (i + nUx > matColumn - 1) {
+            continue;
+        }
+        if (fmod(i, nUx) == 0) {
+            continue;
+        }
+        if (fmod(i, nUx) == nUx - 1) {
+            continue;
+        }
+        operatorPosition[0] = i;
+        operatorPosition[1] = i + nUx;
+//        cout << rowIndex << "\t" << operatorPosition[0] << "\t" << operatorPosition[1] << endl;
+        MatSetValues(dUdyOperator, 1, &rowIndex, 2, operatorPosition, operatorValue, INSERT_VALUES);
+        rowIndex++;
+    }
+    MatAssemblyBegin(dUdyOperator, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(dUdyOperator, MAT_FINAL_ASSEMBLY);
+}
+
+void poseidondVdxOperator(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdxOperator) {
+    PetscInt operatorPosition[2];
+    PetscScalar operatorValue[2];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    MatGetSize(dVdxOperator, &matRow, &matColumn);
+    operatorValue[0] = -1.0 / dx;
+    operatorValue[1] = 1.0 / dx;
+    for (int i = 0; i < matColumn; i++) {
+        if ((fmod(i, nVx - 1) == nVx - 2)) {
+            continue;
+        }
+        if (i < nVx - 1) {
+            continue;
+        }
+        if (i > (nVx - 1) * (nVy - 1) - 1) {
+            continue;
+        }
+        operatorPosition[0] = i;
+        operatorPosition[1] = i + 1;
+//        cout << rowIndex << "\t" << operatorPosition[0] << "\t" << operatorPosition[1] << endl;
+        MatSetValues(dVdxOperator, 1, &rowIndex, 2, operatorPosition, operatorValue, INSERT_VALUES);
+        rowIndex++;
+    }
+    MatAssemblyBegin(dVdxOperator, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(dVdxOperator, MAT_FINAL_ASSEMBLY);
+}
+
+void poseidondVdyOperator(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdyOperator) {
+    PetscInt operatorPosition[2];
+    PetscScalar operatorValue[2];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    MatGetSize(dVdyOperator, &matRow, &matColumn);
+    operatorValue[0] = -1.0 / dy;
+    operatorValue[1] = 1.0 / dy;
+    for (int i = 0; i < matColumn; i++) {
+        if (i + nVx - 1 > matColumn - 1) {
+            continue;
+        }
+        operatorPosition[0] = i;
+        operatorPosition[1] = i + nVx - 1;
+//        cout << rowIndex << "\t" << operatorPosition[0] << "\t" << operatorPosition[1] << endl;
+        MatSetValues(dVdyOperator, 1, &rowIndex, 2, operatorPosition, operatorValue, INSERT_VALUES);
+        rowIndex++;
+    }
+    MatAssemblyBegin(dVdyOperator, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(dVdyOperator, MAT_FINAL_ASSEMBLY);
 }
