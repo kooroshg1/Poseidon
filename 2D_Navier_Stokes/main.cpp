@@ -7,8 +7,16 @@ static char help[] = "Solves the 2D incompressible laminar Navier-Stokes equatio
 
 using namespace std;
 
-void poseidonGetUIndex(PetscInt nUx, PetscInt nUy, PetscInt *uBoundaryIndex, PetscInt *uInteriorIndex, PetscInt *uWestBoundaryIndex, PetscInt *uNorthBoundaryIndex, PetscInt *uEastBoundaryIndex, PetscInt *uSouthBoundaryIndex);
-void poseidonGetVIndex(PetscInt nVx, PetscInt nVy, PetscInt *vBoundaryIndex, PetscInt *vInteriorIndex, PetscInt *vWestBoundaryIndex, PetscInt *vNorthBoundaryIndex, PetscInt *vEastBoundaryIndex, PetscInt *vSouthBoundaryIndex);
+void poseidonGetUIndex(PetscInt nUx, PetscInt nUy, PetscInt *uBoundaryIndex, PetscInt *uInteriorIndex,
+                       PetscInt *uWestBoundaryIndex, PetscInt *uWestGhostBoundaryIndex,
+                       PetscInt *uNorthBoundaryIndex, PetscInt *uNorthGhostBoundaryIndex,
+                       PetscInt *uEastBoundaryIndex, PetscInt *uEastGhostBoundaryIndex,
+                       PetscInt *uSouthBoundaryIndex, PetscInt *uSouthGhostBoundaryIndex);
+void poseidonGetVIndex(PetscInt nVx, PetscInt nVy, PetscInt *vBoundaryIndex, PetscInt *vInteriorIndex,
+                       PetscInt *vWestBoundaryIndex, PetscInt *vWestGhostBoundaryIndex,
+                       PetscInt *vNorthBoundaryIndex, PetscInt *vNorthGhostBoundaryIndex,
+                       PetscInt *vEastBoundaryIndex, PetscInt *vEastGhostBoundaryIndex,
+                       PetscInt *vSouthBoundaryIndex, PetscInt *vSouthGhostBoundaryIndex);
 void poseidonGetPIndex(PetscInt nPx, PetscInt nPy, PetscInt *pBoundaryIndex, PetscInt *pInteriorIndex);
 void poseidonUhbarOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, PetscInt *uInteriorIndex, Mat &UhbarOperator);
 void poseidonUhtildeOperator(PetscInt nUx, PetscInt nUy, PetscInt nUinterior, PetscInt *uInteriorIndex, Mat &UhtildeOperator);
@@ -23,6 +31,9 @@ void poseidondUdyOperator(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy
 void poseidondVdxOperator(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdxOperator);
 void poseidondVdyOperator(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdyOperator);
 void poseidonLaplacianOperator(Mat &A, PetscInt nx, PetscInt ny, PetscReal dx, PetscReal dy);
+void poseidondUdX(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy, Mat &dUdX);
+void poseidondVdY(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdX);
+void poseidonLaplacianNeumann(PetscInt nx, PetscInt ny, PetscReal dx, PetscReal dy, Mat &L);
 
 int main(int argc, char **args) {
     /*
@@ -85,27 +96,40 @@ int main(int argc, char **args) {
      */
     PetscInt *uBoundaryIndex = new PetscInt[2 * nUx + 2 * (nUy - 2)]();
     PetscInt *uInteriorIndex = new PetscInt[nUx * nUy - 2 * nUx - 2 * (nUy - 2)]();
-    PetscInt *uWestBoundaryIndex = new PetscInt[nUy]();
-    PetscInt *uNorthBoundaryIndex = new PetscInt[nUx]();
-    PetscInt *uEastBoundaryIndex = new PetscInt[nUy]();
-    PetscInt *uSouthBoundaryIndex = new PetscInt[nUx]();
+    PetscInt *uWestBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uWestGhostBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uNorthBoundaryIndex = new PetscInt[nUx - 2]();
+    PetscInt *uNorthGhostBoundaryIndex = new PetscInt[nUx - 2]();
+    PetscInt *uEastBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uEastGhostBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uSouthBoundaryIndex = new PetscInt[nUx - 2]();
+    PetscInt *uSouthGhostBoundaryIndex = new PetscInt[nUx - 2]();
 
     PetscInt *vBoundaryIndex = new PetscInt[2 * nVx + 2 * (nVy - 2)]();
     PetscInt *vInteriorIndex = new PetscInt[nVx * nVy - 2 * nVx - 2 * (nVy - 2)]();
-    PetscInt *vWestBoundaryIndex = new PetscInt[nVy]();
-    PetscInt *vNorthBoundaryIndex = new PetscInt[nVx]();
-    PetscInt *vEastBoundaryIndex = new PetscInt[nVy]();
-    PetscInt *vSouthBoundaryIndex = new PetscInt[nVx]();
+    PetscInt *vWestBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vWestGhostBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vNorthBoundaryIndex = new PetscInt[nVx - 2]();
+    PetscInt *vNorthGhostBoundaryIndex = new PetscInt[nVx - 2]();
+    PetscInt *vEastBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vEastGhostBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vSouthBoundaryIndex = new PetscInt[nVx - 2]();
+    PetscInt *vSouthGhostBoundaryIndex = new PetscInt[nVx - 2]();
 
     PetscInt *pBoundaryIndex = new PetscInt[2 * nPx + 2 * (nPy - 2)]();
     PetscInt *pInteriorIndex = new PetscInt[nPx * nPy - 2 * nPx - 2 * (nPy - 2)]();
 
-    poseidonGetUIndex(nUx, nUy, uBoundaryIndex, uInteriorIndex, uWestBoundaryIndex, uNorthBoundaryIndex, uEastBoundaryIndex, uSouthBoundaryIndex);
-    poseidonGetVIndex(nVx, nVy, vBoundaryIndex, vInteriorIndex, vWestBoundaryIndex, vNorthBoundaryIndex, vEastBoundaryIndex, vSouthBoundaryIndex);
+    poseidonGetUIndex(nUx, nUy, uBoundaryIndex, uInteriorIndex,
+                      uWestBoundaryIndex, uWestGhostBoundaryIndex,
+                      uNorthBoundaryIndex, uNorthGhostBoundaryIndex,
+                      uEastBoundaryIndex, uEastGhostBoundaryIndex,
+                      uSouthBoundaryIndex, uSouthGhostBoundaryIndex);
+    poseidonGetVIndex(nVx, nVy, vBoundaryIndex, vInteriorIndex,
+                      vWestBoundaryIndex, vWestGhostBoundaryIndex,
+                      vNorthBoundaryIndex, vNorthGhostBoundaryIndex,
+                      vEastBoundaryIndex, vEastGhostBoundaryIndex,
+                      vSouthBoundaryIndex, vSouthGhostBoundaryIndex);
     poseidonGetPIndex(nPx, nPy, pBoundaryIndex, pInteriorIndex);
-
-    PetscIntView(nUx, uNorthBoundaryIndex, PETSC_VIEWER_STDOUT_WORLD);
-    PetscIntView(nUx, uNorthBoundaryIndex + 1, PETSC_VIEWER_STDOUT_WORLD);
 
 //    PetscIntView(2 * (nx + 1) + 2 * ny, uBoundaryIndex, PETSC_VIEWER_STDOUT_WORLD);
 //    PetscIntView((nx + 1) * (ny + 2) - 2 * (nx + 1) - 2 * ny, uInteriorIndex, PETSC_VIEWER_STDOUT_WORLD);
@@ -137,10 +161,10 @@ int main(int argc, char **args) {
     Vec uWestBoundaryValue, uNorthBoundaryValue, uEastBoundaryValue, uSouthBoundaryValue;
     Vec vWestBoundaryValue, vNorthBoundaryValue, vEastBoundaryValue, vSouthBoundaryValue;
 
-    VecCreate(PETSC_COMM_WORLD, &uWestBoundaryValue); VecSetSizes(uWestBoundaryValue, PETSC_DECIDE, nUy); VecSetFromOptions(uWestBoundaryValue);
-    VecCreate(PETSC_COMM_WORLD, &uNorthBoundaryValue); VecSetSizes(uNorthBoundaryValue, PETSC_DECIDE, nUx); VecSetFromOptions(uNorthBoundaryValue);
-    VecCreate(PETSC_COMM_WORLD, &uEastBoundaryValue); VecSetSizes(uEastBoundaryValue, PETSC_DECIDE, nUy); VecSetFromOptions(uEastBoundaryValue);
-    VecCreate(PETSC_COMM_WORLD, &uSouthBoundaryValue); VecSetSizes(uSouthBoundaryValue, PETSC_DECIDE, nUx); VecSetFromOptions(uSouthBoundaryValue);
+    VecCreate(PETSC_COMM_WORLD, &uWestBoundaryValue); VecSetSizes(uWestBoundaryValue, PETSC_DECIDE, nUy - 2); VecSetFromOptions(uWestBoundaryValue);
+    VecCreate(PETSC_COMM_WORLD, &uNorthBoundaryValue); VecSetSizes(uNorthBoundaryValue, PETSC_DECIDE, nUx - 2); VecSetFromOptions(uNorthBoundaryValue);
+    VecCreate(PETSC_COMM_WORLD, &uEastBoundaryValue); VecSetSizes(uEastBoundaryValue, PETSC_DECIDE, nUy - 2); VecSetFromOptions(uEastBoundaryValue);
+    VecCreate(PETSC_COMM_WORLD, &uSouthBoundaryValue); VecSetSizes(uSouthBoundaryValue, PETSC_DECIDE, nUx - 2); VecSetFromOptions(uSouthBoundaryValue);
 
     VecCreate(PETSC_COMM_WORLD, &vWestBoundaryValue); VecSetSizes(vWestBoundaryValue, PETSC_DECIDE, nVy); VecSetFromOptions(vWestBoundaryValue);
     VecCreate(PETSC_COMM_WORLD, &vNorthBoundaryValue); VecSetSizes(vNorthBoundaryValue, PETSC_DECIDE, nVx); VecSetFromOptions(vNorthBoundaryValue);
@@ -161,18 +185,14 @@ int main(int argc, char **args) {
     PetscScalar *vSouthBoundaryValue_array; VecGetArray(vSouthBoundaryValue, &vSouthBoundaryValue_array);
 
     // Assigning boundary condition values
-    VecSetValues(U, nUy, uWestBoundaryIndex, uWestBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(V, nVy, vWestBoundaryIndex, vWestBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(U, nUx, uNorthBoundaryIndex, uNorthBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(V, nVx, vNorthBoundaryIndex, vNorthBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(U, nUy, uEastBoundaryIndex, uEastBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(V, nVy, vEastBoundaryIndex, vEastBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(U, nUx, uSouthBoundaryIndex, uSouthBoundaryValue_array, INSERT_VALUES);
-    VecSetValues(V, nVx, vSouthBoundaryIndex, vSouthBoundaryValue_array, INSERT_VALUES);
-
-    // Destroying vectors
-    VecDestroy(&uWestBoundaryValue); VecDestroy(&uNorthBoundaryValue); VecDestroy(&uEastBoundaryValue); VecDestroy(&uSouthBoundaryValue);
-    VecDestroy(&vWestBoundaryValue); VecDestroy(&vNorthBoundaryValue); VecDestroy(&vEastBoundaryValue); VecDestroy(&vSouthBoundaryValue);
+    VecSetValues(U, nUy - 2, uWestBoundaryIndex, uWestBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(V, nVy - 2, vWestBoundaryIndex, vWestBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(U, nUx - 2, uNorthBoundaryIndex, uNorthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(V, nVx - 2, vNorthBoundaryIndex, vNorthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(U, nUy - 2, uEastBoundaryIndex, uEastBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(V, nVy - 2, vEastBoundaryIndex, vEastBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(U, nUx - 2, uSouthBoundaryIndex, uSouthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(V, nVx - 2, vSouthBoundaryIndex, vSouthBoundaryValue_array, INSERT_VALUES);
 
     /*
      * Calcualte Uhbar, Uhtitlde, ... operators for discretising the convective terms.
@@ -312,9 +332,9 @@ int main(int argc, char **args) {
     Vec UvbarXVhtilde, Vvbar2, VvbarXVvtilde, UvbarABS, VvbarABS;
     Vec UvbarVhbar_gammaXUvbarVhtilde, Vvbar2_gammaXVvbarXVvtilde;
 
-    Vec UstarRHSx, UstarRHSy;
-    Vec VstarRHSx, VstarRHSy;
-    Vec UstarRHS, VstarRHS;
+    Vec UsRHSx, UsRHSy;
+    Vec VsRHSx, VsRHSy;
+    Vec UsRHS, VsRHS;
 
     VecDuplicate(Uhbar, &Uhbar2);
     VecDuplicate(Uhbar, &UhbarXUhtitlde);
@@ -332,12 +352,12 @@ int main(int argc, char **args) {
     VecDuplicate(Uvbar, &UvbarVhbar_gammaXUvbarVhtilde);
     VecDuplicate(Vvbar, &Vvbar2_gammaXVvbarXVvtilde);
 
-    VecCreate(PETSC_COMM_WORLD, &UstarRHSx); VecSetSizes(UstarRHSx, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UstarRHSx);
-    VecCreate(PETSC_COMM_WORLD, &UstarRHSy); VecSetSizes(UstarRHSy, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UstarRHSy);
-    VecCreate(PETSC_COMM_WORLD, &UstarRHS); VecSetSizes(UstarRHS, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UstarRHS);
-    VecCreate(PETSC_COMM_WORLD, &VstarRHSx); VecSetSizes(VstarRHSx, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VstarRHSx);
-    VecCreate(PETSC_COMM_WORLD, &VstarRHSy); VecSetSizes(VstarRHSy, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VstarRHSy);
-    VecCreate(PETSC_COMM_WORLD, &VstarRHS); VecSetSizes(VstarRHS, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VstarRHS);
+    VecCreate(PETSC_COMM_WORLD, &UsRHSx); VecSetSizes(UsRHSx, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UsRHSx);
+    VecCreate(PETSC_COMM_WORLD, &UsRHSy); VecSetSizes(UsRHSy, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UsRHSy);
+    VecCreate(PETSC_COMM_WORLD, &UsRHS); VecSetSizes(UsRHS, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UsRHS);
+    VecCreate(PETSC_COMM_WORLD, &VsRHSx); VecSetSizes(VsRHSx, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VsRHSx);
+    VecCreate(PETSC_COMM_WORLD, &VsRHSy); VecSetSizes(VsRHSy, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VsRHSy);
+    VecCreate(PETSC_COMM_WORLD, &VsRHS); VecSetSizes(VsRHS, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VsRHS);
 
     VecAbs(UhbarABS);
     VecAbs(VhbarABS);
@@ -358,28 +378,28 @@ int main(int argc, char **args) {
     VecWAXPY(UvbarVhbar_gammaXUvbarVhtilde, -gamma, UvbarXVhtilde, UvbarXVhbar);
     VecWAXPY(Vvbar2_gammaXVvbarXVvtilde, -gamma, VvbarXVvtilde, Vvbar2);
 
-    MatMult(dUdxOperator, Uhbar2_gammaXUhbarXUhtilde, UstarRHSx);
-    MatMult(dUdyOperator, UvbarXVhbar_gammaXVhbarUvtilde, UstarRHSy);
-    MatMult(dVdxOperator, UvbarVhbar_gammaXUvbarVhtilde, VstarRHSx);
-    MatMult(dVdyOperator, Vvbar2_gammaXVvbarXVvtilde, VstarRHSy);
+    MatMult(dUdxOperator, Uhbar2_gammaXUhbarXUhtilde, UsRHSx);
+    MatMult(dUdyOperator, UvbarXVhbar_gammaXVhbarUvtilde, UsRHSy);
+    MatMult(dVdxOperator, UvbarVhbar_gammaXUvbarVhtilde, VsRHSx);
+    MatMult(dVdyOperator, Vvbar2_gammaXVvbarXVvtilde, VsRHSy);
 
-    VecWAXPY(UstarRHS, 1, UstarRHSx, UstarRHSy);
-    VecWAXPY(VstarRHS, 1, VstarRHSx, VstarRHSy);
+    VecWAXPY(UsRHS, 1, UsRHSx, UsRHSy);
+    VecWAXPY(VsRHS, 1, VsRHSx, VsRHSy);
 
-    VecScale(VstarRHS, -1.0 * dt);
-    VecScale(UstarRHS, -1.0 * dt);
+    VecScale(VsRHS, -1.0 * dt);
+    VecScale(UsRHS, -1.0 * dt);
 
-    PetscScalar *UstarRHS_array, *VstarRHS_array;
+    PetscScalar *UsRHS_array, *VsRHS_array;
 
-    VecGetArray(UstarRHS, &UstarRHS_array);
-    VecGetArray(VstarRHS, &VstarRHS_array);
+    VecGetArray(UsRHS, &UsRHS_array);
+    VecGetArray(VsRHS, &VsRHS_array);
 
-    // Calculate Ustar and Vstar for convective term
-    Vec Ustar, Vstar;
-    VecDuplicate(U, &Ustar); VecDuplicate(V, &Vstar);
-    VecCopy(U, Ustar); VecCopy(V, Vstar);
-    VecSetValues(Ustar, nUinterior, uInteriorIndex, UstarRHS_array, ADD_VALUES);
-    VecSetValues(Vstar, nVinterior, vInteriorIndex, VstarRHS_array, ADD_VALUES);
+    // Calculate Us and Vs for convective term
+    Vec Us, Vs;
+    VecDuplicate(U, &Us); VecDuplicate(V, &Vs);
+    VecCopy(U, Us); VecCopy(V, Vs);
+    VecSetValues(Us, nUinterior, uInteriorIndex, UsRHS_array, ADD_VALUES);
+    VecSetValues(Vs, nVinterior, vInteriorIndex, VsRHS_array, ADD_VALUES);
 
     /*
      * Solve implicit viscosity
@@ -396,23 +416,190 @@ int main(int argc, char **args) {
     /*
      * Generate Laplacian operator
      */
-    poseidonLaplacianOperator(Lu, nUx - 2, nUy - 2, dx, dy); poseidonLaplacianOperator(Lv, nVx - 2, nVy - 2, dx, dy);
+    poseidonLaplacianOperator(Lu, nUx - 2, nUy - 2, dx, dy);
+    poseidonLaplacianOperator(Lv, nVx - 2, nVy - 2, dx, dy);
+
     MatScale(Lu, -dt / Re);
     MatShift(Lu, 1.0);
 
-    PetscObjectSetName((PetscObject) Lu, "LuMat");
-    PetscViewer matlabViewer;
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "solution.output", &matlabViewer);
-    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
-    MatView(Lu, matlabViewer);
-    cout << dt << endl;
-    MatDestroy(&Lu); MatDestroy(&Lv);
+    /*
+     * Setup the right-hand-size for the implicit viscosity calculation
+     */
+    // U-velocity
+    Vec UssRHS;
+    VecCreate(PETSC_COMM_WORLD, &UssRHS); VecSetSizes(UssRHS, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(UssRHS);
+
+    Vec uSouthBoundaryValueScaled, uWestBoundaryValueScaled, uNorthBoundaryValueScaled, uEastBoundaryValueScaled;
+    VecDuplicate(uSouthBoundaryValue, &uSouthBoundaryValueScaled); VecCopy(uSouthBoundaryValue, uSouthBoundaryValueScaled); VecScale(uSouthBoundaryValueScaled, dt / (Re * pow(dy, 2.0)));
+    VecDuplicate(uWestBoundaryValue, &uWestBoundaryValueScaled); VecCopy(uWestBoundaryValue, uWestBoundaryValueScaled); VecScale(uWestBoundaryValueScaled, dt / (Re * pow(dx, 2.0)));
+    VecDuplicate(uNorthBoundaryValue, &uNorthBoundaryValueScaled); VecCopy(uNorthBoundaryValue, uNorthBoundaryValueScaled); VecScale(uNorthBoundaryValueScaled, dt / (Re * pow(dy, 2.0)));
+    VecDuplicate(uEastBoundaryValue, &uEastBoundaryValueScaled); VecCopy(uEastBoundaryValue, uEastBoundaryValueScaled); VecScale(uEastBoundaryValueScaled, dt / (Re * pow(dx, 2.0)));
+
+    PetscScalar *Us_array = new PetscScalar[nUx * nUy]; VecGetArray(Us, &Us_array);
+    PetscScalar *uSouthBoundaryValueScaled_array = new PetscScalar[nUx - 2]; VecGetArray(uSouthBoundaryValueScaled, &uSouthBoundaryValueScaled_array);
+    PetscScalar *uWestBoundaryValueScaled_array = new PetscScalar[nUy - 2]; VecGetArray(uWestBoundaryValueScaled, &uWestBoundaryValueScaled_array);
+    PetscScalar *uNorthBoundaryValueScaled_array = new PetscScalar[nUx - 2]; VecGetArray(uNorthBoundaryValueScaled, &uNorthBoundaryValueScaled_array);
+    PetscScalar *uEastBoundaryValueScaled_array = new PetscScalar[nUy - 2]; VecGetArray(uEastBoundaryValueScaled, &uEastBoundaryValueScaled_array);
+
+    VecSetValues(UssRHS, (nUx - 2) * (nUy - 2), uInteriorIndex, Us_array, INSERT_VALUES);
+    VecSetValues(UssRHS, (nUx - 2), uSouthGhostBoundaryIndex, uSouthBoundaryValueScaled_array, ADD_VALUES);
+    VecSetValues(UssRHS, (nUy - 2), uWestGhostBoundaryIndex, uWestBoundaryValueScaled_array, ADD_VALUES);
+    VecSetValues(UssRHS, (nUx - 2), uNorthGhostBoundaryIndex, uNorthBoundaryValueScaled_array, ADD_VALUES);
+    VecSetValues(UssRHS, (nUy - 2), uEastGhostBoundaryIndex, uEastBoundaryValueScaled_array, ADD_VALUES);
+    VecAssemblyBegin(UssRHS);
+    VecAssemblyEnd(UssRHS);
+
+    // V-velocity
+    Vec VssRHS;
+    VecCreate(PETSC_COMM_WORLD, &VssRHS); VecSetSizes(VssRHS, PETSC_DECIDE, nVx * nVy); VecSetFromOptions(VssRHS);
+
+    Vec vSouthBoundaryValueScaled, vWestBoundaryValueScaled, vNorthBoundaryValueScaled, vEastBoundaryValueScaled;
+    VecDuplicate(vSouthBoundaryValue, &vSouthBoundaryValueScaled); VecCopy(vSouthBoundaryValue, vSouthBoundaryValueScaled); VecScale(vSouthBoundaryValueScaled, dt / (Re * pow(dy, 2.0)));
+    VecDuplicate(vWestBoundaryValue, &vWestBoundaryValueScaled); VecCopy(vWestBoundaryValue, vWestBoundaryValueScaled); VecScale(vWestBoundaryValueScaled, dt / (Re * pow(dx, 2.0)));
+    VecDuplicate(vNorthBoundaryValue, &vNorthBoundaryValueScaled); VecCopy(vNorthBoundaryValue, vNorthBoundaryValueScaled); VecScale(vNorthBoundaryValueScaled, dt / (Re * pow(dy, 2.0)));
+    VecDuplicate(vEastBoundaryValue, &vEastBoundaryValueScaled); VecCopy(vEastBoundaryValue, vEastBoundaryValueScaled); VecScale(vEastBoundaryValueScaled, dt / (Re * pow(dx, 2.0)));
+
+    PetscScalar *Vs_array = new PetscScalar[nVx * nVy]; VecGetArray(Vs, &Vs_array);
+    PetscScalar *vSouthBoundaryValueScaled_array = new PetscScalar[nVx - 2]; VecGetArray(vSouthBoundaryValueScaled, &vSouthBoundaryValueScaled_array);
+    PetscScalar *vWestBoundaryValueScaled_array = new PetscScalar[nVy - 2]; VecGetArray(vWestBoundaryValueScaled, &vWestBoundaryValueScaled_array);
+    PetscScalar *vNorthBoundaryValueScaled_array = new PetscScalar[nVx - 2]; VecGetArray(vNorthBoundaryValueScaled, &vNorthBoundaryValueScaled_array);
+    PetscScalar *vEastBoundaryValueScaled_array = new PetscScalar[nVy - 2]; VecGetArray(vEastBoundaryValueScaled, &vEastBoundaryValueScaled_array);
+
+    VecSetValues(VssRHS, (nVx - 2) * (nVy - 2), vInteriorIndex, Vs_array, INSERT_VALUES);
+    VecSetValues(VssRHS, (nVx - 2), vSouthGhostBoundaryIndex, vSouthBoundaryValueScaled_array, ADD_VALUES);
+    VecSetValues(VssRHS, (nVy - 2), vWestGhostBoundaryIndex, vWestBoundaryValueScaled_array, ADD_VALUES);
+    VecSetValues(VssRHS, (nVx - 2), vNorthGhostBoundaryIndex, vNorthBoundaryValueScaled_array, ADD_VALUES);
+    VecSetValues(VssRHS, (nVy - 2), vEastGhostBoundaryIndex, vEastBoundaryValueScaled_array, ADD_VALUES);
+    VecAssemblyBegin(VssRHS);
+    VecAssemblyEnd(VssRHS);
+
+    // Get the interior nodes values
+    PetscScalar *UssRHSinterior_array = new PetscScalar[(nUx - 2) * (nUy - 2)]();
+    PetscScalar *VssRHSinterior_array = new PetscScalar[(nVx - 2) * (nVy - 2)]();
+
+    VecGetValues(UssRHS, (nUx - 2) * (nUy - 2), uInteriorIndex, UssRHSinterior_array);
+    VecGetValues(VssRHS, (nVx - 2) * (nVy - 2), vInteriorIndex, VssRHSinterior_array);
+
+    Vec UssRHSinterior; VecCreate(PETSC_COMM_WORLD, &UssRHSinterior);
+    VecSetSizes(UssRHSinterior, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UssRHSinterior);
+    for (int i = 0; i < (nUx - 2) * (nUy - 2); i++) {
+        VecSetValue(UssRHSinterior, i, UssRHSinterior_array[i], INSERT_VALUES);
+    }
+    VecAssemblyBegin(UssRHSinterior);
+    VecAssemblyEnd(UssRHSinterior);
+
+    Vec VssRHSinterior; VecCreate(PETSC_COMM_WORLD, &VssRHSinterior);
+    VecSetSizes(VssRHSinterior, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VssRHSinterior);
+    for (int i = 0; i < (nVx - 2) * (nVy - 2); i++) {
+        VecSetValue(VssRHSinterior, i, VssRHSinterior_array[i], INSERT_VALUES);
+    }
+    VecAssemblyBegin(VssRHSinterior);
+    VecAssemblyEnd(VssRHSinterior);
+
+    // Solve implicit viscosity - u velocity
+    Vec UssInterior;
+    VecDuplicate(UssRHSinterior, &UssInterior);
+    KSP viscositySolverU;
+    KSPCreate(PETSC_COMM_WORLD, &viscositySolverU);
+    KSPSetOperators(viscositySolverU, Lu, Lu);
+    KSPSetFromOptions(viscositySolverU);
+    KSPSolve(viscositySolverU, UssRHSinterior, UssInterior);
+
+    // Solve implicit viscosity - v velocity
+    Vec VssInterior;
+    VecDuplicate(VssRHSinterior, &VssInterior);
+    KSP viscositySolverV;
+    KSPCreate(PETSC_COMM_WORLD, &viscositySolverV);
+    KSPSetOperators(viscositySolverV, Lv, Lv);
+    KSPSetFromOptions(viscositySolverV);
+    KSPSolve(viscositySolverV, VssRHSinterior, VssInterior);
+
+    // Add the boundaries to the U** and V**
+    Vec Uss; VecCreate(PETSC_COMM_WORLD, &Uss); VecSetSizes(Uss, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(Uss);
+    Vec Vss; VecCreate(PETSC_COMM_WORLD, &Vss); VecSetSizes(Vss, PETSC_DECIDE, nVx * nVy); VecSetFromOptions(Vss);
+
+    PetscReal *UssInterior_array = new PetscReal[(nUx - 2) * (nUy - 2)];
+    PetscReal *VssInterior_array = new PetscReal[(nVx - 2) * (nVy - 2)];
+
+    VecGetArray(UssInterior, &UssInterior_array);
+    VecGetArray(VssInterior, &VssInterior_array);
+
+    VecSetValues(Uss, (nUx - 2) * (nUy - 2), uInteriorIndex, UssInterior_array, INSERT_VALUES);
+    VecSetValues(Uss, nUx - 2, uSouthBoundaryIndex, uSouthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(Uss, nUy - 2, uWestBoundaryIndex, uWestBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(Uss, nUx - 2, uNorthBoundaryIndex, uNorthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(Uss, nUy - 2, uEastBoundaryIndex, uEastBoundaryValue_array, INSERT_VALUES);
+
+    VecSetValues(Vss, (nVx - 2) * (nVy - 2), vInteriorIndex, VssRHSinterior_array, INSERT_VALUES);
+    VecSetValues(Uss, nVx - 2, vSouthBoundaryIndex, vSouthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(Uss, nVy - 2, vWestBoundaryIndex, vWestBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(Uss, nVx - 2, vNorthBoundaryIndex, vNorthBoundaryValue_array, INSERT_VALUES);
+    VecSetValues(Uss, nVy - 2, vEastBoundaryIndex, vEastBoundaryValue_array, INSERT_VALUES);
+
+    /*
+     * Pressure correction step
+     */
+    Mat dUssdXoperator, dVssdYoperator;
+    MatCreate(PETSC_COMM_WORLD, &dUssdXoperator); MatCreate(PETSC_COMM_WORLD, &dVssdYoperator);
+    MatSetSizes(dUssdXoperator, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 2), nUx * nUy);
+    MatSetSizes(dVssdYoperator, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 1), nVx * nVy);
+    MatSetFromOptions(dUssdXoperator); MatSetFromOptions(dVssdYoperator);
+    MatSetUp(dUssdXoperator); MatSetUp(dVssdYoperator);
+
+    poseidondUdX(nUx, nUy, dx, dy, dUssdXoperator);
+    poseidondVdY(nVx, nVy, dx, dy, dVssdYoperator);
+
+    Vec dUssdX, dVssdY;
+    VecCreate(PETSC_COMM_WORLD, &dUssdX); VecSetSizes(dUssdX, PETSC_DECIDE, nPinterior); VecSetFromOptions(dUssdX);
+    VecCreate(PETSC_COMM_WORLD, &dVssdY); VecSetSizes(dVssdY, PETSC_DECIDE, nPinterior); VecSetFromOptions(dVssdY);
+    MatMult(dUssdXoperator, Uss, dUssdX);
+    MatMult(dVssdYoperator, Vss, dVssdY);
+
+    Vec Prhs;
+
+    VecDuplicate(dVssdY, &Prhs);
+    VecCopy(dVssdY, Prhs);
+    VecAXPBY(Prhs, 1 / dt, 1 / dt, dUssdX);
+
+    Mat nablaPoperator;
+    MatCreate(PETSC_COMM_WORLD, &nablaPoperator);
+    MatCreate(PETSC_COMM_WORLD, &nablaPoperator);
+    MatSetSizes(nablaPoperator, PETSC_DECIDE, PETSC_DECIDE, (nPx - 2) * (nPy - 2), (nPx - 2) * (nPy - 2));
+    MatSetFromOptions(nablaPoperator);
+    MatSetUp(nablaPoperator);
+
+    poseidonLaplacianNeumann(nPx, nPy, dx, dy, nablaPoperator);
+
+//    poseidondUdxOperator(nUx, nUy, dx, dy, dUssdXoperator);
+//    poseidondVdyOperator(nVx - 1, nVy - 2, dx, dy, dVssdYoperator);
+
+//    PetscInt vecSize, matSize1, matSize2;
+//    VecGetSize(dUssdX, &vecSize);
+//    cout << vecSize << endl;
+//    MatGetSize(dUssdXoperator, &matSize1, &matSize2);
+//    cout << matSize1 << "\t\t" << matSize2 << endl;
+
+
+//
+//
+
+//    PetscInt vecSize, matSize1, matSize2;
+//    VecGetSize(Us, &vecSize);
+//    MatGetSize(Lu, &matSize1, &matSize2);
+//    cout << matSize1 << "\t\t" << matSize2 << endl;
+//    cout << vecSize << endl;
+//    PetscObjectSetName((PetscObject) Lu, "LuMat");
+//    PetscViewer matlabViewer;
+//    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "solution.output", &matlabViewer);
+//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
+//    MatView(Lu, matlabViewer);
+
 //    PetscInt vecSize, vecSize1, vecSize2;
-//    VecGetSize(UstarRHS, &vecSize);
+//    VecGetSize(UsRHS, &vecSize);
 //    MatGetSize(dVdxOperator, &vecSize1, &vecSize2);
 //    cout << vecSize  << endl;
 //    cout << vecSize << "\t\t" << vecSize1 << "\t\t" << vecSize2 << endl;
-//    VecWAXPY(UstarRHS, 1.0, Uhbar2_gammaXUhbarXUhtilde, UvbarXVhbar_gammaXVhbarUvtilde);
+//    VecWAXPY(UsRHS, 1.0, Uhbar2_gammaXUhbarXUhtilde, UvbarXVhbar_gammaXVhbarUvtilde);
 //    VecPointwiseMult(Uvbar, Vhbar, Vhbar);
 //    VecPointwiseMult(Vhbar, Uvtilde, Uvtilde);
 //    VecAXPY(Uhbar, 1.0, Uvtilde);
@@ -439,9 +626,9 @@ int main(int argc, char **args) {
     MatDestroy(&dUdxOperator); MatDestroy(&dUdyOperator);
     MatDestroy(&dVdxOperator); MatDestroy(&dVdyOperator);
 
-    VecDestroy(&UstarRHSx); VecDestroy(&UstarRHSy);
-    VecDestroy(&VstarRHSx); VecDestroy(&VstarRHSy);
-    VecDestroy(&UstarRHS); VecDestroy(&VstarRHS);
+    VecDestroy(&UsRHSx); VecDestroy(&UsRHSy);
+    VecDestroy(&VsRHSx); VecDestroy(&VsRHSy);
+    VecDestroy(&UsRHS); VecDestroy(&VsRHS);
 
     VecDestroy(&Uhbar2);
     VecDestroy(&UhbarXUhtitlde);
@@ -459,13 +646,39 @@ int main(int argc, char **args) {
     VecDestroy(&UvbarVhbar_gammaXUvbarVhtilde);
     VecDestroy(&Vvbar2_gammaXVvbarXVvtilde);
 
-    VecDestroy(&Ustar); VecDestroy(&Vstar);
+    VecDestroy(&Us); VecDestroy(&Vs);
 
+    // Destroying vectors
+    VecDestroy(&uWestBoundaryValue); VecDestroy(&uNorthBoundaryValue); VecDestroy(&uEastBoundaryValue); VecDestroy(&uSouthBoundaryValue);
+    VecDestroy(&vWestBoundaryValue); VecDestroy(&vNorthBoundaryValue); VecDestroy(&vEastBoundaryValue); VecDestroy(&vSouthBoundaryValue);
+
+    VecDestroy(&uSouthBoundaryValueScaled); VecDestroy(&uNorthBoundaryValueScaled);
+    VecDestroy(&uEastBoundaryValueScaled); VecDestroy(&uWestBoundaryValueScaled);
+    VecDestroy(&UssRHS); VecDestroy(&UssRHS);
+    VecDestroy(&vSouthBoundaryValueScaled); VecDestroy(&vNorthBoundaryValueScaled);
+    VecDestroy(&vEastBoundaryValueScaled); VecDestroy(&vWestBoundaryValueScaled);
+    VecDestroy(&VssRHS); VecDestroy(&VssRHS);
+
+    MatDestroy(&Lu); MatDestroy(&Lv);
+    VecDestroy(&UssRHSinterior); VecDestroy(&VssRHSinterior);
+
+    KSPDestroy(&viscositySolverU); KSPDestroy(&viscositySolverV);
+
+    VecDestroy(&Uss); VecDestroy(&Vss);
+
+    MatDestroy(&dUssdXoperator); MatDestroy(&dVssdYoperator);
+
+    VecDestroy(&dUssdX); VecDestroy(&dVssdY);
+    VecDestroy(&Prhs);
     PetscFinalize();
     return 0;
 }
 
-void poseidonGetUIndex(PetscInt nUx, PetscInt nUy, PetscInt *uBoundaryIndex, PetscInt *uInteriorIndex, PetscInt *uWestBoundaryIndex, PetscInt *uNorthBoundaryIndex, PetscInt *uEastBoundaryIndex, PetscInt *uSouthBoundaryIndex) {
+void poseidonGetUIndex(PetscInt nUx, PetscInt nUy, PetscInt *uBoundaryIndex, PetscInt *uInteriorIndex,
+                       PetscInt *uWestBoundaryIndex, PetscInt *uWestGhostBoundaryIndex,
+                       PetscInt *uNorthBoundaryIndex, PetscInt *uNorthGhostBoundaryIndex,
+                       PetscInt *uEastBoundaryIndex, PetscInt *uEastGhostBoundaryIndex,
+                       PetscInt *uSouthBoundaryIndex, PetscInt *uSouthGhostBoundaryIndex) {
     int boundaryIndexTracker = 0;
     int interiorIndexTracker = 0;
     int westBoundaryIndexTracker = 0;
@@ -476,27 +689,39 @@ void poseidonGetUIndex(PetscInt nUx, PetscInt nUy, PetscInt *uBoundaryIndex, Pet
     for (int i = 0; i < nUx * nUy; i++) {
         if (i < nUx) {
             uBoundaryIndex[boundaryIndexTracker] = i;
-            uSouthBoundaryIndex[southBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            southBoundaryIndexTracker++;
+            if ((i != 0) && (i != nUx - 1)) {
+                uSouthBoundaryIndex[southBoundaryIndexTracker] = i;
+                uSouthGhostBoundaryIndex[southBoundaryIndexTracker] = i + nUx;
+                southBoundaryIndexTracker++;
+            }
         }
         else if (i%nUx == 0) {
             uBoundaryIndex[boundaryIndexTracker] = i;
-            uWestBoundaryIndex[westBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            westBoundaryIndexTracker++;
+            if ((i != 0) && (i != nUx * (nUy - 1))) {
+                uWestBoundaryIndex[westBoundaryIndexTracker] = i;
+                uWestGhostBoundaryIndex[westBoundaryIndexTracker] = i + 1;
+                westBoundaryIndexTracker++;
+            }
         }
         else if (i%nUx == nUx - 1) {
             uBoundaryIndex[boundaryIndexTracker] = i;
-            uEastBoundaryIndex[eastBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            eastBoundaryIndexTracker++;
+            if ((i != nUx - 1) && (i != nUx * nUy - 1)) {
+                uEastBoundaryIndex[eastBoundaryIndexTracker] = i;
+                uEastGhostBoundaryIndex[eastBoundaryIndexTracker] = i - 1;
+                eastBoundaryIndexTracker++;
+            }
         }
         else if ((i > nUx * (nUy - 1)) && (i < nUx * nUy)) {
             uBoundaryIndex[boundaryIndexTracker] = i;
-            uNorthBoundaryIndex[northBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            northBoundaryIndexTracker++;
+            if ((nUx * (nUy - 1)) && (i != nUx * nUy - 1)) {
+                uNorthBoundaryIndex[northBoundaryIndexTracker] = i;
+                uNorthGhostBoundaryIndex[northBoundaryIndexTracker] = i - nUx;
+                northBoundaryIndexTracker++;
+            }
         }
         else {
             uInteriorIndex[interiorIndexTracker] = i;
@@ -505,7 +730,11 @@ void poseidonGetUIndex(PetscInt nUx, PetscInt nUy, PetscInt *uBoundaryIndex, Pet
     }
 }
 
-void poseidonGetVIndex(PetscInt nVx, PetscInt nVy, PetscInt *vBoundaryIndex, PetscInt *vInteriorIndex, PetscInt *vWestBoundaryIndex, PetscInt *vNorthBoundaryIndex, PetscInt *vEastBoundaryIndex, PetscInt *vSouthBoundaryIndex) {
+void poseidonGetVIndex(PetscInt nVx, PetscInt nVy, PetscInt *vBoundaryIndex, PetscInt *vInteriorIndex,
+                       PetscInt *vWestBoundaryIndex, PetscInt *vWestGhostBoundaryIndex,
+                       PetscInt *vNorthBoundaryIndex, PetscInt *vNorthGhostBoundaryIndex,
+                       PetscInt *vEastBoundaryIndex, PetscInt *vEastGhostBoundaryIndex,
+                       PetscInt *vSouthBoundaryIndex, PetscInt *vSouthGhostBoundaryIndex) {
     int boundaryIndexTracker = 0;
     int interiorIndexTracker = 0;
     int westBoundaryIndexTracker = 0;
@@ -515,27 +744,39 @@ void poseidonGetVIndex(PetscInt nVx, PetscInt nVy, PetscInt *vBoundaryIndex, Pet
     for (int i = 0; i < nVx * nVy; i++) {
         if (i < nVx) {
             vBoundaryIndex[boundaryIndexTracker] = i;
-            vSouthBoundaryIndex[southBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            southBoundaryIndexTracker++;
+            if ((i != 0) && (i != nVx - 1)) {
+                vSouthBoundaryIndex[southBoundaryIndexTracker] = i;
+                vSouthGhostBoundaryIndex[southBoundaryIndexTracker] = i + nVx;
+                southBoundaryIndexTracker++;
+            }
         }
         else if (i%nVx == 0) {
             vBoundaryIndex[boundaryIndexTracker] = i;
-            vWestBoundaryIndex[westBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            westBoundaryIndexTracker++;
+            if ((i != 0) && (i != nVx * (nVy - 1))) {
+                vWestBoundaryIndex[westBoundaryIndexTracker] = i;
+                vWestGhostBoundaryIndex[westBoundaryIndexTracker] = i + 1;
+                westBoundaryIndexTracker++;
+            }
         }
         else if (i%nVx == nVx - 1) {
             vBoundaryIndex[boundaryIndexTracker] = i;
-            vEastBoundaryIndex[eastBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            eastBoundaryIndexTracker++;
+            if ((nVx - 1) && (nVx * nVy - 1)) {
+                vEastBoundaryIndex[eastBoundaryIndexTracker] = i;
+                vEastGhostBoundaryIndex[eastBoundaryIndexTracker] = i - 1;
+                eastBoundaryIndexTracker++;
+            }
         }
         else if ((i > nVx * (nVy - 1)) && (i < nVx * nVy)) {
             vBoundaryIndex[boundaryIndexTracker] = i;
-            vNorthBoundaryIndex[northBoundaryIndexTracker] = i;
             boundaryIndexTracker++;
-            northBoundaryIndexTracker++;
+            if ((i != nVx * (nVy - 1)) && (i != nVx * nVy - 1)) {
+                vNorthBoundaryIndex[northBoundaryIndexTracker] = i;
+                vNorthGhostBoundaryIndex[northBoundaryIndexTracker] = i - nVx;
+                northBoundaryIndexTracker++;
+            }
         }
         else {
             vInteriorIndex[interiorIndexTracker] = i;
@@ -949,4 +1190,76 @@ void poseidonLaplacianOperator(Mat &A, PetscInt nx, PetscInt ny, PetscReal dx, P
     }
     MatAssemblyBegin(A, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(A, MAT_FINAL_ASSEMBLY);
+}
+
+void poseidondUdX(PetscInt nUx, PetscInt nUy, PetscReal dx, PetscReal dy, Mat &dUdX) {
+    PetscInt operatorPosition[2];
+    PetscScalar operatorValue[2];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    MatGetSize(dUdX, &matRow, &matColumn);
+    operatorValue[0] = -1.0 / dx;
+    operatorValue[1] = 1.0 / dx;
+    for (int i = 0; i < nUx * nUy; i++) {
+        if (fmod(i, nUx) == nUx - 1) {
+            continue;
+        }
+        if (i < nUx) {
+            continue;
+        }
+        if (i > nUx * (nUy - 1) - 1) {
+            continue;
+        }
+        operatorPosition[0] = i;
+        operatorPosition[1] = i + 1;
+//        cout << rowIndex << "\t" << operatorPosition[0] << "\t" << operatorPosition[1] << endl;
+        MatSetValues(dUdX, 1, &rowIndex, 2, operatorPosition, operatorValue, INSERT_VALUES);
+        rowIndex++;
+    }
+    MatAssemblyBegin(dUdX, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(dUdX, MAT_FINAL_ASSEMBLY);
+}
+
+void poseidondVdY(PetscInt nVx, PetscInt nVy, PetscReal dx, PetscReal dy, Mat &dVdX) {
+    PetscInt operatorPosition[2];
+    PetscScalar operatorValue[2];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    MatGetSize(dVdX, &matRow, &matColumn);
+    operatorValue[0] = -1.0 / dy;
+    operatorValue[1] = 1.0 / dy;
+    for (int i = 0; i < nVx * nVy; i++) {
+        if (fmod(i, nVx) == 0) {
+            continue;
+        }
+        if (fmod(i, nVx) == nVx - 1) {
+            continue;
+        }
+        if (i > nVx * (nVy - 1) - 1) {
+            continue;
+        }
+        operatorPosition[0] = i;
+        operatorPosition[1] = i + nVx;
+//        cout << rowIndex << "\t" << operatorPosition[0] << "\t" << operatorPosition[1] << endl;
+        MatSetValues(dVdX, 1, &rowIndex, 2, operatorPosition, operatorValue, INSERT_VALUES);
+        rowIndex++;
+    }
+    MatAssemblyBegin(dVdX, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(dVdX, MAT_FINAL_ASSEMBLY);
+}
+
+void poseidonLaplacianNeumann(PetscInt nx, PetscInt ny, PetscReal dx, PetscReal dy, Mat &L) {
+    PetscInt operatorPosition[5];
+    PetscScalar operatorValue[5];
+    PetscInt matRow, matColumn;
+    PetscInt rowIndex = 0;
+    dx = pow(dx, 2.0);
+    dy = pow(dy, 2.0);
+    MatGetSize(L, &matRow, &matColumn);
+    for (int i = 0; i < nx * ny; i++) {
+        if ((i < nx) || (i > nx * (ny - 1) - 1) || (fmod(i, nx) == nx - 1) || (fmod(i, nx) == 0)) {
+            continue;
+        }
+        cout << i << endl;
+    }
 }
