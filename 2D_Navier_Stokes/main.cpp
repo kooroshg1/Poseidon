@@ -41,9 +41,10 @@ void Xbar_tilde(PetscInt nx, PetscInt ny, Mat &Lhbar, PetscInt *skipCode, string
 PetscScalar calculateGamma(PetscScalar dt, Vec &U, Vec &V);
 void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *skipCode, string direction);
 
-void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, Mat LdUsdX, Mat LdUsdY, PetscInt nUx, PetscInt nUy, Vec U, Vec &Us,
-                           Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs,
-                           PetscScalar gamma);
+void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, Mat LdUsdX, Mat LdUsdY, PetscInt nUx, PetscInt nUy, Vec U, Vec &Us, PetscInt *uInteriorIndex,
+                           Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs, PetscInt *vInteriorIndex,
+                           PetscScalar gamma, PetscReal dt);
+void vecExtract(Vec &V, PetscInt *nodeIndex, PetscInt n);
 
 int main(int argc, char **args) {
     /*
@@ -80,6 +81,46 @@ int main(int argc, char **args) {
     PetscInt nPx = nx + 2, nPy = ny + 2,
             nPinterior = nPx * nPy - 2 * nPx - 2 * (nPy - 2),
             nPboundary = 2 * nPx + 2 * (nPy - 2); // Number of nodes for u-velocity variable
+
+    /*
+     * Track the boundary and interior indices for different variables
+     */
+    PetscInt *uBoundaryIndex = new PetscInt[2 * nUx + 2 * (nUy - 2)]();
+    PetscInt *uInteriorIndex = new PetscInt[nUx * nUy - 2 * nUx - 2 * (nUy - 2)]();
+    PetscInt *uWestBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uWestGhostBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uNorthBoundaryIndex = new PetscInt[nUx - 2]();
+    PetscInt *uNorthGhostBoundaryIndex = new PetscInt[nUx - 2]();
+    PetscInt *uEastBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uEastGhostBoundaryIndex = new PetscInt[nUy - 2]();
+    PetscInt *uSouthBoundaryIndex = new PetscInt[nUx - 2]();
+    PetscInt *uSouthGhostBoundaryIndex = new PetscInt[nUx - 2]();
+
+    PetscInt *vBoundaryIndex = new PetscInt[2 * nVx + 2 * (nVy - 2)]();
+    PetscInt *vInteriorIndex = new PetscInt[nVx * nVy - 2 * nVx - 2 * (nVy - 2)]();
+    PetscInt *vWestBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vWestGhostBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vNorthBoundaryIndex = new PetscInt[nVx - 2]();
+    PetscInt *vNorthGhostBoundaryIndex = new PetscInt[nVx - 2]();
+    PetscInt *vEastBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vEastGhostBoundaryIndex = new PetscInt[nVy - 2]();
+    PetscInt *vSouthBoundaryIndex = new PetscInt[nVx - 2]();
+    PetscInt *vSouthGhostBoundaryIndex = new PetscInt[nVx - 2]();
+
+    PetscInt *pBoundaryIndex = new PetscInt[2 * nPx + 2 * (nPy - 2)]();
+    PetscInt *pInteriorIndex = new PetscInt[nPx * nPy - 2 * nPx - 2 * (nPy - 2)]();
+
+    poseidonGetUIndex(nUx, nUy, uBoundaryIndex, uInteriorIndex,
+                      uWestBoundaryIndex, uWestGhostBoundaryIndex,
+                      uNorthBoundaryIndex, uNorthGhostBoundaryIndex,
+                      uEastBoundaryIndex, uEastGhostBoundaryIndex,
+                      uSouthBoundaryIndex, uSouthGhostBoundaryIndex);
+    poseidonGetVIndex(nVx, nVy, vBoundaryIndex, vInteriorIndex,
+                      vWestBoundaryIndex, vWestGhostBoundaryIndex,
+                      vNorthBoundaryIndex, vNorthGhostBoundaryIndex,
+                      vEastBoundaryIndex, vEastGhostBoundaryIndex,
+                      vSouthBoundaryIndex, vSouthGhostBoundaryIndex);
+    poseidonGetPIndex(nPx, nPy, pBoundaryIndex, pInteriorIndex);
 
     /*
      * Initializing variables for u-velocity (U), v-velocity (V), and pressure (P)
@@ -161,8 +202,9 @@ int main(int argc, char **args) {
      */
     Vec Us; VecCreate(PETSC_COMM_WORLD, &Us); VecSetSizes(Us, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(Us); VecSet(Us, 0);
     Vec Vs; VecCreate(PETSC_COMM_WORLD, &Vs); VecSetSizes(Vs, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(Vs); VecSet(Vs, 0);
-    calculateStarVariable(LUhbar, LUhtilde, LUvbar, LUvtilde, LdUsdX, LdUsdY, nUx, nUy, U, Us,
-                          LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, gamma);
+    calculateStarVariable(LUhbar, LUhtilde, LUvbar, LUvtilde, LdUsdX, LdUsdY, nUx, nUy, U, Us, uInteriorIndex,
+                          LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, vInteriorIndex,
+                          gamma, dt);
     /*
      * Destroying vectors
      */
@@ -305,9 +347,9 @@ void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *
     MatAssemblyEnd(Ldds, MAT_FINAL_ASSEMBLY);
 }
 
-void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, Mat LdUsdX, Mat LdUsdY, PetscInt nUx, PetscInt nUy, Vec U, Vec &Us,
-                           Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs,
-                           PetscScalar gamma) {
+void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, Mat LdUsdX, Mat LdUsdY, PetscInt nUx, PetscInt nUy, Vec U, Vec &Us, PetscInt *uInteriorIndex,
+                           Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs, PetscInt *vInteriorIndex,
+                           PetscScalar gamma, PetscReal dt) {
     // Generating vectors
     Vec Uhbar; VecCreate(PETSC_COMM_WORLD, &Uhbar); VecSetSizes(Uhbar, PETSC_DECIDE, (nUx - 1) * (nUy - 2)); VecSetFromOptions(Uhbar); VecSet(Uhbar, 0);
     Vec Uvbar; VecCreate(PETSC_COMM_WORLD, &Uvbar); VecSetSizes(Uvbar, PETSC_DECIDE, nUx * (nUy - 1)); VecSetFromOptions(Uvbar); VecSet(Uvbar, 0);
@@ -381,9 +423,8 @@ void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, M
     MatMult(LdUsdY, Usy, dUsydY);
     MatMult(LdVsdX, Vsx, dVsxdX);
     MatMult(LdVsdY, Vsy, dVsydY);
-
-    // Putting together the righ-hand-side for Ustar
-    Mat LUy; MatCreate(PETSC_COMM_WORLD, &LUy); MatSetSizes(LUy, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), nUx * (nUy - 2)); MatSetFromOptions(LUy); MatSetUp(LUy);
+    // Since the dimension of dUsxdX and dUsydY and dVsxdX and dVsydY do not match, we need to extract the data of these vectors
+    PetscInt *dUsydYInteriorNodeIndex = new PetscInt[(nUx - 2) * (nUy - 2)];
     PetscInt index = 0;
     for (int i = 0; i < nUx * (nUy - 2); i++) {
         if (fmod(i, nUx) == 0) {
@@ -392,42 +433,37 @@ void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, M
         if (fmod(i, nUx) == nUx - 1) {
             continue;
         }
-        MatSetValue(LUy, index, i, 1.0, INSERT_VALUES);
+        dUsydYInteriorNodeIndex[index] = i;
         index++;
     }
-    MatAssemblyBegin(LUy, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(LUy, MAT_FINAL_ASSEMBLY);
-
-    Vec dUsydY_; VecCreate(PETSC_COMM_WORLD, &dUsydY_); VecSetSizes(dUsydY_, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(dUsydY_); VecSet(dUsydY_, 0);
-    MatMult(LUy, dUsydY, dUsydY_);
     //
-    Mat LVx; MatCreate(PETSC_COMM_WORLD, &LVx); MatSetSizes(LVx, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 2), (nVx - 2) * nVy); MatSetFromOptions(LVx); MatSetUp(LVx);
+    PetscInt *dVsxdXInteriorNodeIndex = new PetscInt[(nVx - 2) * (nVy - 2)];
     index = 0;
     for (int i = 0; i < (nVx - 2) * nVy; i++) {
         if (i < nVx - 2) {
             continue;
         }
-        if (i > (nVx - 2) * (nVy - 1) - 1) {
+        if (i >= (nVx - 2) * (nVy - 1)) {
             continue;
         }
-        MatSetValue(LVx, index, i, 1.0, INSERT_VALUES);
+        dVsxdXInteriorNodeIndex[index] = i;
         index++;
     }
-    MatAssemblyBegin(LVx, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(LVx, MAT_FINAL_ASSEMBLY);
+    vecExtract(dUsydY, dUsydYInteriorNodeIndex, (nUx - 2) * (nUy - 2));
+    vecExtract(dVsxdX, dVsxdXInteriorNodeIndex, (nVx - 2) * (nVy - 2));
 
-    Vec dVsxdX_; VecCreate(PETSC_COMM_WORLD, &dVsxdX_); VecSetSizes(dVsxdX_, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(dVsxdX_); VecSet(dVsxdX_, 0);
-    MatMult(LVx, dVsxdX, dVsxdX_);
-
-    // Calculating the right-hand-side
+    // Calculating the right-hand-side of Ustar and Vstar equations
     Vec UsRHS, VsRHS;
-    VecDuplicate(dUsxdX, &UsRHS);
-    VecDuplicate(dVsydY, &VsRHS);
+    VecDuplicate(dUsxdX, &UsRHS); VecDuplicate(dVsxdX, &VsRHS);
+    VecWAXPY(UsRHS, 1, dUsxdX, dUsydY); VecScale(UsRHS, -1.0);
+    VecWAXPY(VsRHS, 1, dVsxdX, dVsydY); VecScale(VsRHS, -1.0);
 
-    VecWAXPY(UsRHS, 1.0, dUsxdX, dUsydY_);
-    VecWAXPY(VsRHS, 1.0, dVsxdX_, dVsydY);
+    // Calculating Ustar and Vstar
+    vecExtract(U, uInteriorIndex, (nUx - 2) * (nUy - 2));
+    vecExtract(V, vInteriorIndex, (nVx - 2) * (nVy - 2));
 
-
+    VecWAXPY(Us, dt, UsRHS, U);
+    VecWAXPY(Vs, dt, VsRHS, V);
 
     // Destroying vectors
     VecDestroy(&Uhbar); VecDestroy(&Uvbar); VecDestroy(&Vhbar); VecDestroy(&Vvbar);
@@ -440,8 +476,17 @@ void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, M
     VecDestroy(&UvbarABS_x_Vhtilde); VecDestroy(&VvbarABS_x_Vvtilde);
 
     VecDestroy(&dUsxdX); VecDestroy(&dUsydY); VecDestroy(&dVsxdX); VecDestroy(&dVsydY);
+
+    VecDestroy(&UsRHS); VecDestroy(&VsRHS);
 }
 
+void vecExtract(Vec &V, PetscInt *nodeIndex, PetscInt n) {
+    PetscScalar *V_ = new PetscScalar[n];
+    VecGetValues(V, n, nodeIndex, V_);
+//    VecDestroy(&V);
+    VecCreate(PETSC_COMM_WORLD, &V); VecSetSizes(V, PETSC_DECIDE, n); VecSetFromOptions(V); VecSet(V, 0);
+    VecRestoreArray(V, &V_);
+}
 //    /*
 //     * Track the boundary and interior indices for different variables
 //     */
