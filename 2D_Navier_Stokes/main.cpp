@@ -41,6 +41,10 @@ void Xbar_tilde(PetscInt nx, PetscInt ny, Mat &Lhbar, PetscInt *skipCode, string
 PetscScalar calculateGamma(PetscScalar dt, Vec &U, Vec &V);
 void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *skipCode, string direction);
 
+void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, Mat LdUsdX, Mat LdUsdY, PetscInt nUx, PetscInt nUy, Vec U, Vec &Us,
+                           Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs,
+                           PetscScalar gamma);
+
 int main(int argc, char **args) {
     /*
      * Petsc MPI variables
@@ -128,25 +132,37 @@ int main(int argc, char **args) {
     Xbar_tilde(nVx, nVy, LVvbar, skipWalls, "bar", "vertical");
     Xbar_tilde(nVx, nVy, LVvtilde, skipWalls, "tilde", "vertical");
 
+    /*
+     * Calculate gamma
+     */
     PetscReal gamma = calculateGamma(dt, U, V);
 
+    /*
+     * Differential operators definition
+     */
     Mat LdUsdX; MatCreate(PETSC_COMM_WORLD, &LdUsdX); MatSetSizes(LdUsdX, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), (nUx - 1) * (nUy - 2)); MatSetFromOptions(LdUsdX); MatSetUp(LdUsdX);
     Mat LdUsdY; MatCreate(PETSC_COMM_WORLD, &LdUsdY); MatSetSizes(LdUsdY, PETSC_DECIDE, PETSC_DECIDE, nUx * (nUy - 2), nUx * (nUy - 1)); MatSetFromOptions(LdUsdY); MatSetUp(LdUsdY);
 
-    Mat LdVsdX; MatCreate(PETSC_COMM_WORLD, &LdVsdX); MatSetSizes(LdVsdX, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 1), nUx * (nUy - 1)); MatSetFromOptions(LdVsdX); MatSetUp(LdVsdX);
+    Mat LdVsdX; MatCreate(PETSC_COMM_WORLD, &LdVsdX); MatSetSizes(LdVsdX, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * nVy, (nVx - 1) * nVy); MatSetFromOptions(LdVsdX); MatSetUp(LdVsdX);
     Mat LdVsdY; MatCreate(PETSC_COMM_WORLD, &LdVsdY); MatSetSizes(LdVsdY, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 2), (nVx - 2) * (nVy - 1)); MatSetFromOptions(LdVsdY); MatSetUp(LdVsdY);
 
     skipWalls[0] = 0; skipWalls[1] = 0; skipWalls[2] = 0; skipWalls[3] = 1;
-    diffOperator(nUx - 1, nUy - 2, dx, LdUsdX, skipWalls, "horizontal");
+    diffOperator(nUx - 1, nUy - 2, dx, LdUsdX, skipWalls, "horizontal"); // Operator for Ustar_RHS diff w.r.t x
     skipWalls[0] = 0; skipWalls[1] = 0; skipWalls[2] = 1; skipWalls[3] = 0;
-    diffOperator(nUx - 1, nUy - 2, dx, LdUsdY, skipWalls, "vertical");
+    diffOperator(nUx, nUy - 1, dy, LdUsdY, skipWalls, "vertical"); // Operator for Ustar_RHS diff w.r.t y
 
     skipWalls[0] = 0; skipWalls[1] = 0; skipWalls[2] = 0; skipWalls[3] = 1;
-    diffOperator(nUx - 1, nUy - 2, dx, LdUsdX, skipWalls, "horizontal");
+    diffOperator(nVx - 1, nVy, dx, LdVsdX, skipWalls, "horizontal"); // Operator for Vstar_RHS diff w.r.t x
     skipWalls[0] = 0; skipWalls[1] = 0; skipWalls[2] = 1; skipWalls[3] = 0;
-    diffOperator(nUx - 1, nUy - 2, dx, LdUsdY, skipWalls, "vertical");
+    diffOperator(nVx - 2, nVy - 1, dy, LdVsdY, skipWalls, "vertical"); // Operator for Vstar_RHS diff w.r.t y
 
-//    calculateUstarRHS(LUhbar, LUhtilde, LUvbar, LVhbar, LUvtilde, gamma)
+    /*
+     * Calculating the right-hand-side for Ustar and Vstar calculations
+     */
+    Vec Us; VecCreate(PETSC_COMM_WORLD, &Us); VecSetSizes(Us, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(Us); VecSet(Us, 0);
+    Vec Vs; VecCreate(PETSC_COMM_WORLD, &Vs); VecSetSizes(Vs, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(Vs); VecSet(Vs, 0);
+    calculateStarVariable(LUhbar, LUhtilde, LUvbar, LUvtilde, LdUsdX, LdUsdY, nUx, nUy, U, Us,
+                          LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, gamma);
     /*
      * Destroying vectors
      */
@@ -156,6 +172,10 @@ int main(int argc, char **args) {
 
     MatDestroy(&LUhbar); MatDestroy(&LUvbar); MatDestroy(&LUhtilde); MatDestroy(&LUvtilde);
     MatDestroy(&LVhbar); MatDestroy(&LVvbar); MatDestroy(&LVhtilde); MatDestroy(&LVvtilde);
+
+    MatDestroy(&LdUsdX); MatDestroy(&LdUsdY); MatDestroy(&LdVsdX); MatDestroy(&LdVsdY);
+
+    VecDestroy(&Us); VecDestroy(&Vs);
 
     PetscFinalize();
     return 0;
@@ -247,8 +267,8 @@ void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *
     PetscScalar barOperatorValue[2];
     PetscInt rowIndex = 0;
 
-    barOperatorValue[0] = 1.0 / ds;
-    barOperatorValue[1] = -1.0 / ds;
+    barOperatorValue[0] = -1.0 / ds;
+    barOperatorValue[1] = 1.0 / ds;
 
     for (int i = 0; i < nx * ny; i++) {
         if ((i < nx) && (skipCode[0] == 1)) {
@@ -283,6 +303,143 @@ void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *
     }
     MatAssemblyBegin(Ldds, MAT_FINAL_ASSEMBLY);
     MatAssemblyEnd(Ldds, MAT_FINAL_ASSEMBLY);
+}
+
+void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, Mat LdUsdX, Mat LdUsdY, PetscInt nUx, PetscInt nUy, Vec U, Vec &Us,
+                           Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs,
+                           PetscScalar gamma) {
+    // Generating vectors
+    Vec Uhbar; VecCreate(PETSC_COMM_WORLD, &Uhbar); VecSetSizes(Uhbar, PETSC_DECIDE, (nUx - 1) * (nUy - 2)); VecSetFromOptions(Uhbar); VecSet(Uhbar, 0);
+    Vec Uvbar; VecCreate(PETSC_COMM_WORLD, &Uvbar); VecSetSizes(Uvbar, PETSC_DECIDE, nUx * (nUy - 1)); VecSetFromOptions(Uvbar); VecSet(Uvbar, 0);
+    Vec Vhbar; VecCreate(PETSC_COMM_WORLD, &Vhbar); VecSetSizes(Vhbar, PETSC_DECIDE, (nVx - 1) * nVy); VecSetFromOptions(Vhbar); VecSet(Vhbar, 0);
+    Vec Vvbar; VecCreate(PETSC_COMM_WORLD, &Vvbar); VecSetSizes(Vvbar, PETSC_DECIDE, (nVx - 2) * (nVy - 1)); VecSetFromOptions(Vvbar); VecSet(Vvbar, 0);
+
+    Vec Uhtilde, Uvtilde, Vhtilde, Vvtilde;
+    VecDuplicate(Uhbar, &Uhtilde);
+    VecDuplicate(Uvbar, &Uvtilde);
+    VecDuplicate(Vhbar, &Vhtilde);
+    VecDuplicate(Vvbar, &Vvtilde);
+    // Calculating basic variables required for calculated Ustar_RHS and Vstar_RHS
+    MatMult(LUhbar, U, Uhbar);
+    MatMult(LUhtilde, U, Uhtilde);
+    MatMult(LUvbar, U, Uvbar);
+    MatMult(LUvtilde, U, Uvtilde);
+    MatMult(LVhbar, V, Vhbar);
+    MatMult(LVhtilde, V, Vhtilde);
+    MatMult(LVvbar, V, Vvbar);
+    MatMult(LVvtilde, V, Vvtilde);
+
+    // Multiplying basic variables
+    Vec Uhbar2, UhbarABS, VhbarABS, UvbarABS, Vvbar2, VvbarABS;
+    VecDuplicate(Uhbar, &Uhbar2);
+    VecDuplicate(Uhbar, &UhbarABS); VecCopy(Uhbar, UhbarABS);
+    VecDuplicate(Vhbar, &VhbarABS); VecCopy(Vhbar, VhbarABS);
+    VecDuplicate(Uvbar, &UvbarABS); VecCopy(Uvbar, UvbarABS);
+    VecDuplicate(Vvbar, &Vvbar2);
+    VecDuplicate(Vvbar, &VvbarABS); VecCopy(Vvbar, VvbarABS);
+    //
+    VecPointwiseMult(Uhbar2, Uhbar, Uhbar);
+    VecPointwiseMult(Vvbar2, Vvbar, Vvbar);
+    VecAbs(UhbarABS);
+    VecAbs(VhbarABS);
+    VecAbs(UvbarABS);
+    VecAbs(VvbarABS);
+
+    //
+    Vec UhbarABS_x_Uhtilde, Uvbar_x_Vhbar, VhbarABS_x_Uvtilde;
+    Vec UvbarABS_x_Vhtilde, VvbarABS_x_Vvtilde;
+
+    VecDuplicate(UhbarABS, &UhbarABS_x_Uhtilde);
+    VecDuplicate(Uvbar, &Uvbar_x_Vhbar);
+    VecDuplicate(VhbarABS, &VhbarABS_x_Uvtilde);
+    VecDuplicate(UvbarABS, &UvbarABS_x_Vhtilde);
+    VecDuplicate(VvbarABS, &VvbarABS_x_Vvtilde);
+
+    VecPointwiseMult(UhbarABS_x_Uhtilde, UhbarABS, Uhtilde);
+    VecPointwiseMult(Uvbar_x_Vhbar, Uvbar, Vhbar);
+    VecPointwiseMult(VhbarABS_x_Uvtilde, VhbarABS, Uvtilde);
+    VecPointwiseMult(UvbarABS_x_Vhtilde, UvbarABS, Vhtilde);
+    VecPointwiseMult(VvbarABS_x_Vvtilde, VvbarABS, Vvtilde);
+
+    //
+    Vec Usx, Usy, Vsx, Vsy;
+    VecDuplicate(Uhbar, &Usx); VecDuplicate(Uvbar, &Usy);
+    VecDuplicate(Uvbar, &Vsx); VecDuplicate(Vvbar, &Vsy);
+
+    VecWAXPY(Usx, -gamma, UhbarABS_x_Uhtilde, Uhbar2);
+    VecWAXPY(Usy, -gamma, VhbarABS_x_Uvtilde, Uvbar_x_Vhbar);
+    VecWAXPY(Vsx, -gamma, Uvbar_x_Vhbar, Uvbar_x_Vhbar);
+    VecWAXPY(Vsy, -gamma, VvbarABS_x_Vvtilde, Vvbar2);
+
+    //
+    Vec dUsxdX; VecCreate(PETSC_COMM_WORLD, &dUsxdX); VecSetSizes(dUsxdX, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(dUsxdX); VecSet(dUsxdX, 0);
+    Vec dUsydY; VecCreate(PETSC_COMM_WORLD, &dUsydY); VecSetSizes(dUsydY, PETSC_DECIDE, nUx * (nUy - 2)); VecSetFromOptions(dUsydY); VecSet(dUsydY, 0);
+    Vec dVsxdX; VecCreate(PETSC_COMM_WORLD, &dVsxdX); VecSetSizes(dVsxdX, PETSC_DECIDE, (nVx - 2) * nVy); VecSetFromOptions(dVsxdX); VecSet(dVsxdX, 0);
+    Vec dVsydY; VecCreate(PETSC_COMM_WORLD, &dVsydY); VecSetSizes(dVsydY, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(dVsydY); VecSet(dVsydY, 0);
+
+    MatMult(LdUsdX, Usx, dUsxdX);
+    MatMult(LdUsdY, Usy, dUsydY);
+    MatMult(LdVsdX, Vsx, dVsxdX);
+    MatMult(LdVsdY, Vsy, dVsydY);
+
+    // Putting together the righ-hand-side for Ustar
+    Mat LUy; MatCreate(PETSC_COMM_WORLD, &LUy); MatSetSizes(LUy, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), nUx * (nUy - 2)); MatSetFromOptions(LUy); MatSetUp(LUy);
+    PetscInt index = 0;
+    for (int i = 0; i < nUx * (nUy - 2); i++) {
+        if (fmod(i, nUx) == 0) {
+            continue;
+        }
+        if (fmod(i, nUx) == nUx - 1) {
+            continue;
+        }
+        MatSetValue(LUy, index, i, 1.0, INSERT_VALUES);
+        index++;
+    }
+    MatAssemblyBegin(LUy, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(LUy, MAT_FINAL_ASSEMBLY);
+
+    Vec dUsydY_; VecCreate(PETSC_COMM_WORLD, &dUsydY_); VecSetSizes(dUsydY_, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(dUsydY_); VecSet(dUsydY_, 0);
+    MatMult(LUy, dUsydY, dUsydY_);
+    //
+    Mat LVx; MatCreate(PETSC_COMM_WORLD, &LVx); MatSetSizes(LVx, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 2), (nVx - 2) * nVy); MatSetFromOptions(LVx); MatSetUp(LVx);
+    index = 0;
+    for (int i = 0; i < (nVx - 2) * nVy; i++) {
+        if (i < nVx - 2) {
+            continue;
+        }
+        if (i > (nVx - 2) * (nVy - 1) - 1) {
+            continue;
+        }
+        MatSetValue(LVx, index, i, 1.0, INSERT_VALUES);
+        index++;
+    }
+    MatAssemblyBegin(LVx, MAT_FINAL_ASSEMBLY);
+    MatAssemblyEnd(LVx, MAT_FINAL_ASSEMBLY);
+
+    Vec dVsxdX_; VecCreate(PETSC_COMM_WORLD, &dVsxdX_); VecSetSizes(dVsxdX_, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(dVsxdX_); VecSet(dVsxdX_, 0);
+    MatMult(LVx, dVsxdX, dVsxdX_);
+
+    // Calculating the right-hand-side
+    Vec UsRHS, VsRHS;
+    VecDuplicate(dUsxdX, &UsRHS);
+    VecDuplicate(dVsydY, &VsRHS);
+
+    VecWAXPY(UsRHS, 1.0, dUsxdX, dUsydY_);
+    VecWAXPY(VsRHS, 1.0, dVsxdX_, dVsydY);
+
+
+
+    // Destroying vectors
+    VecDestroy(&Uhbar); VecDestroy(&Uvbar); VecDestroy(&Vhbar); VecDestroy(&Vvbar);
+    VecDestroy(&Uhtilde); VecDestroy(&Uvtilde); VecDestroy(&Vhtilde); VecDestroy(&Vvtilde);
+
+    VecDestroy(&Uhbar2); VecDestroy(&UhbarABS); VecDestroy(&VhbarABS);
+    VecDestroy(&UvbarABS); VecDestroy(&Vvbar2); VecDestroy(&VvbarABS);
+
+    VecDestroy(&UhbarABS_x_Uhtilde); VecDestroy(&Uvbar_x_Vhbar); VecDestroy(&VhbarABS_x_Uvtilde);
+    VecDestroy(&UvbarABS_x_Vhtilde); VecDestroy(&VvbarABS_x_Vvtilde);
+
+    VecDestroy(&dUsxdX); VecDestroy(&dUsydY); VecDestroy(&dVsxdX); VecDestroy(&dVsydY);
 }
 
 //    /*
