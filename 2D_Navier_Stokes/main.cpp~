@@ -37,8 +37,6 @@ void poseidonLaplacianNeumann(PetscInt nx, PetscInt ny, PetscReal dx, PetscReal 
 
 void showVectorSize(Vec A);
 void showMatrixSize(Mat A);
-void writeMat(Mat A);
-void writeVec(Vec A);
 void Xbar_tilde(PetscInt nx, PetscInt ny, Mat &Lhbar, PetscInt *skipCode, string indicator, string direction);
 PetscScalar calculateGamma(PetscScalar dt, Vec &U, Vec &V);
 void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *skipCode, string direction);
@@ -47,21 +45,6 @@ void calculateStarVariable(Mat LUhbar, Mat LUhtilde, Mat LUvbar, Mat LUvtilde, M
                            Mat LVhbar, Mat LVhtilde, Mat LVvbar, Mat LVvtilde, Mat LdVsdX, Mat LdVsdY, PetscInt nVx, PetscInt nVy, Vec V, Vec &Vs, PetscInt *vInteriorIndex,
                            PetscScalar gamma, PetscReal dt);
 void vecExtract(Vec &V, PetscInt *nodeIndex, PetscInt n);
-void laplacianOperator(Mat &L, PetscInt nx, PetscInt ny, PetscScalar dx, PetscScalar dy, PetscInt *neumannBoundary, string variable);
-
-void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
-                             PetscInt *southBoundaryIndex, PetscInt *southBoundaryGhostIndex,
-                             PetscInt *westBoundaryIndex, PetscInt *westBoundaryGhostIndex,
-                             PetscInt *northBoundaryIndex, PetscInt *northBoundaryGhostIndex,
-                             PetscInt *eastBoundaryIndex, PetscInt *eastBoundaryGhostIndex,
-                             PetscInt *isNeumannBoundary, PetscScalar *dirichletBoundary,
-                             PetscScalar dx, PetscScalar dy,
-                             Vec &XssBoundary, PetscReal dt, PetscReal Re, string variableType);
-
-void calculatePressure(Vec &P, Mat LdUdX, Vec U, Mat LdVdY, Vec V, Mat Lp, PetscReal dt);
-
-void correctVelocity(Vec Uss, Vec Vss, Mat LdPdX, Mat LdPdY, Vec P, PetscReal dt,
-                     PetscInt *uInteriorIndex, PetscInt *vInteriorIndex, Vec &U, Vec &V);
 
 int main(int argc, char **args) {
     /*
@@ -80,20 +63,6 @@ int main(int argc, char **args) {
      * Flow properties
      */
     PetscReal Re = 100;
-
-    /*
-     * Boundary condition type and values
-     * xIsNeumannBoundary defined is the correponding wall has neumann (1) or dirichlet (0) boundary conditions.
-     * These are ordered as {S, W, N, E} walls.
-     * The code currently can handle zero neumann boundary conditions.
-     * The dirichlet boundary values are stored in xDirichletBoundary.
-     * The order is {S, W, N, E}
-     */
-    PetscInt uIsNeumannBoundary[4] = {0, 0, 0, 0};
-    PetscScalar uDirichletBoundary[4] = {1, 2, 3, 4};
-    PetscInt vIsNeumannBoundary[4] = {0, 0, 0, 0};
-    PetscScalar vDirichletBoundary[4] = {10, 20, 30, 40};
-    PetscInt pIsNeumannBoundary[4] = {1, 1, 1, 1};
 
     /*
      * Domain dimensions and properties
@@ -166,35 +135,7 @@ int main(int argc, char **args) {
     // Creating and initializing vectors for holding u and v velocities and pressure
     VecCreate(PETSC_COMM_WORLD, &U); VecSetSizes(U, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(U); VecSet(U, 0);
     VecCreate(PETSC_COMM_WORLD, &V); VecSetSizes(V, PETSC_DECIDE, nVx * nVy); VecSetFromOptions(V); VecSet(V, 0);
-    VecCreate(PETSC_COMM_WORLD, &P); VecSetSizes(P, PETSC_DECIDE, nx * ny); VecSetFromOptions(P); VecSet(P, 0);
-
-    /*
-     * Assign boundary conditions
-     */
-    Vec UssBoundary; VecCreate(PETSC_COMM_WORLD, &UssBoundary); VecSetSizes(UssBoundary, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(UssBoundary); VecSet(UssBoundary, 0);
-    Vec VssBoundary; VecCreate(PETSC_COMM_WORLD, &VssBoundary); VecSetSizes(VssBoundary, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(VssBoundary); VecSet(VssBoundary, 0);
-    assignBoundaryCondition(U, nUx, nUy,
-                            uSouthBoundaryIndex, uSouthGhostBoundaryIndex,
-                            uWestBoundaryIndex, uWestGhostBoundaryIndex,
-                            uNorthBoundaryIndex, uNorthGhostBoundaryIndex,
-                            uEastBoundaryIndex, uEastGhostBoundaryIndex,
-                            uIsNeumannBoundary, uDirichletBoundary,
-                            dx, dy,
-                            UssBoundary, dt, Re, "U");
-
-    assignBoundaryCondition(V, nVx, nVy,
-                            vSouthBoundaryIndex, vSouthGhostBoundaryIndex,
-                            vWestBoundaryIndex, vWestGhostBoundaryIndex,
-                            vNorthBoundaryIndex, vNorthGhostBoundaryIndex,
-                            vEastBoundaryIndex, vEastGhostBoundaryIndex,
-                            vIsNeumannBoundary, vDirichletBoundary,
-                            dx, dy,
-                            VssBoundary, dt, Re, "V");
-
-    /*
-     * Calculate gamma
-     */
-    PetscReal gamma = calculateGamma(dt, U, V);
+    VecCreate(PETSC_COMM_WORLD, &P); VecSetSizes(P, PETSC_DECIDE, nPx * nPy); VecSetFromOptions(P); VecSet(P, 0);
 
     /*
      * Generating operators for calculating \bar{ }^{v}, \bar{ }^{h}, \tilde{ }^{h}, and \tilde{ }^{v} operators
@@ -233,6 +174,11 @@ int main(int argc, char **args) {
     Xbar_tilde(nVx, nVy, LVvtilde, skipWalls, "tilde", "vertical");
 
     /*
+     * Calculate gamma
+     */
+    PetscReal gamma = calculateGamma(dt, U, V);
+
+    /*
      * Differential operators definition
      */
     Mat LdUsdX; MatCreate(PETSC_COMM_WORLD, &LdUsdX); MatSetSizes(LdUsdX, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), (nUx - 1) * (nUy - 2)); MatSetFromOptions(LdUsdX); MatSetUp(LdUsdX);
@@ -252,80 +198,13 @@ int main(int argc, char **args) {
     diffOperator(nVx - 2, nVy - 1, dy, LdVsdY, skipWalls, "vertical"); // Operator for Vstar_RHS diff w.r.t y
 
     /*
-     * Calculating Ustar and Vstar
+     * Calculating the right-hand-side for Ustar and Vstar calculations
      */
     Vec Us; VecCreate(PETSC_COMM_WORLD, &Us); VecSetSizes(Us, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(Us); VecSet(Us, 0);
     Vec Vs; VecCreate(PETSC_COMM_WORLD, &Vs); VecSetSizes(Vs, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(Vs); VecSet(Vs, 0);
     calculateStarVariable(LUhbar, LUhtilde, LUvbar, LUvtilde, LdUsdX, LdUsdY, nUx, nUy, U, Us, uInteriorIndex,
                           LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, vInteriorIndex,
                           gamma, dt);
-
-    /*
-     * Define Laplacian operator
-     */
-    Mat Lu; MatCreate(PETSC_COMM_WORLD, &Lu); MatSetSizes(Lu, PETSC_DECIDE, PETSC_DECIDE, (nUx - 2) * (nUy - 2), (nUx - 2) * (nUy - 2)); MatSetFromOptions(Lu); MatSetUp(Lu);
-    Mat Lv; MatCreate(PETSC_COMM_WORLD, &Lv); MatSetSizes(Lv, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 2), (nVx - 2) * (nVy - 2)); MatSetFromOptions(Lv); MatSetUp(Lv);
-
-    laplacianOperator(Lu, nUx - 2, nUy - 2, dx, dy, uIsNeumannBoundary, "U");
-    laplacianOperator(Lv, nVx - 2, nVy - 2, dx, dy, vIsNeumannBoundary, "V");
-
-    Vec Uss; VecCreate(PETSC_COMM_WORLD, &Uss); VecSetSizes(Uss, PETSC_DECIDE, (nUx - 2) * (nUy - 2)); VecSetFromOptions(Uss); VecSet(Uss, 0);
-    Vec Vss; VecCreate(PETSC_COMM_WORLD, &Vss); VecSetSizes(Vss, PETSC_DECIDE, (nVx - 2) * (nVy - 2)); VecSetFromOptions(Vss); VecSet(Vss, 0);
-
-    VecAXPY(UssBoundary, 1.0, Us);
-    VecAXPY(VssBoundary, 1.0, Vs);
-
-    MatScale(Lu, -dt / Re); MatShift(Lu, 1.0);
-    MatScale(Lv, -dt / Re); MatShift(Lv, 1.0);
-
-    KSP uSolver; KSPCreate(PETSC_COMM_WORLD, &uSolver); KSPSetOperators(uSolver, Lu, Lu); KSPSetFromOptions(uSolver);
-    KSP vSolver; KSPCreate(PETSC_COMM_WORLD, &vSolver); KSPSetOperators(vSolver, Lv, Lv); KSPSetFromOptions(vSolver);
-
-    /*
-     * Solving for imlicit viscosity
-     */
-    KSPSolve(uSolver, UssBoundary, Uss);
-    KSPSolve(vSolver, VssBoundary, Vss);
-
-    /*
-     *
-     */
-    PetscScalar *Uss_ = new PetscScalar[(nUx - 2) * (nUy - 2)]; VecGetArray(Uss, &Uss_);
-    PetscScalar *Vss_ = new PetscScalar[(nVx - 2) * (nVy - 2)]; VecGetArray(Vss, &Vss_);
-
-    VecSetValues(U, (nUx - 2) * (nUy - 2), uInteriorIndex, Uss_, INSERT_VALUES);
-    VecSetValues(V, (nVx - 2) * (nVy - 2), vInteriorIndex, Vss_, INSERT_VALUES);
-
-
-    // Define differential operators for calculating the velocity divergence
-    Mat LdUdX; MatCreate(PETSC_COMM_WORLD, &LdUdX); MatSetSizes(LdUdX, PETSC_DECIDE, PETSC_DECIDE, (nUx - 1) * (nUy - 2), nUx * nUy); MatSetFromOptions(LdUdX); MatSetUp(LdUdX);
-    Mat LdVdY; MatCreate(PETSC_COMM_WORLD, &LdVdY); MatSetSizes(LdVdY, PETSC_DECIDE, PETSC_DECIDE, (nVx - 2) * (nVy - 1), nVx * nVy); MatSetFromOptions(LdVdY); MatSetUp(LdVdY);
-
-    skipWalls[0] = 1; skipWalls[1] = 0; skipWalls[2] = 1; skipWalls[3] = 1;
-    diffOperator(nUx, nUy, dx, LdUdX, skipWalls, "horizontal");
-    skipWalls[0] = 0; skipWalls[1] = 1; skipWalls[2] = 1; skipWalls[3] = 1;
-    diffOperator(nVx, nVy, dy, LdVdY, skipWalls, "vertical");
-
-    // Define laplacian operator for pressure
-    Mat Lp; MatCreate(PETSC_COMM_WORLD, &Lp); MatSetSizes(Lp, PETSC_DECIDE, PETSC_DECIDE, (nPx - 2) * (nPy - 2), (nPx - 2) * (nPy - 2)); MatSetFromOptions(Lp); MatSetUp(Lp);
-    laplacianOperator(Lp, nPx - 2, nPy - 2, dx, dy, pIsNeumannBoundary, "P");
-
-    // Solve for pressure
-    calculatePressure(P, LdUdX, U, LdVdY, V, Lp, dt);
-
-    /*
-     * Corret velocities
-     */
-    Mat LdPdX; MatCreate(PETSC_COMM_WORLD, &LdPdX); MatSetSizes(LdPdX, PETSC_DECIDE, PETSC_DECIDE, (nx - 1) * ny, nx * ny); MatSetFromOptions(LdPdX); MatSetUp(LdPdX);
-    Mat LdPdY; MatCreate(PETSC_COMM_WORLD, &LdPdY); MatSetSizes(LdPdY, PETSC_DECIDE, PETSC_DECIDE, nx * (ny - 1), nx * ny); MatSetFromOptions(LdPdY); MatSetUp(LdPdY);
-
-    skipWalls[0] = 0; skipWalls[1] = 0; skipWalls[2] = 0; skipWalls[3] = 1;
-    diffOperator(nx, ny, dx, LdPdX, skipWalls, "horizontal");
-    skipWalls[0] = 0; skipWalls[1] = 0; skipWalls[2] = 1; skipWalls[3] = 0;
-    diffOperator(nx, ny, dy, LdPdY, skipWalls, "vertical");
-
-    correctVelocity(Uss, Vss, LdPdX, LdPdY, P, dt, uInteriorIndex, vInteriorIndex, U, V);
-
     /*
      * Destroying vectors
      */
@@ -339,12 +218,6 @@ int main(int argc, char **args) {
     MatDestroy(&LdUsdX); MatDestroy(&LdUsdY); MatDestroy(&LdVsdX); MatDestroy(&LdVsdY);
 
     VecDestroy(&Us); VecDestroy(&Vs);
-    MatDestroy(&Lu); MatDestroy(&Lv);
-    KSPDestroy(&uSolver); KSPDestroy(&vSolver);
-    VecDestroy(&Uss); VecDestroy(&Vss);
-
-    MatDestroy(&LdUdX); MatDestroy(&LdVdY);
-    MatDestroy(&Lp);
 
     PetscFinalize();
     return 0;
@@ -362,28 +235,6 @@ void showMatrixSize(Mat A) {
     PetscInt matRow, matColumn;
     MatGetSize(A, &matRow, &matColumn);
     cout << "Row size = " << matRow << "\t Column size = " << matColumn << endl;
-}
-
-void writeMat(Mat A) {
-    PetscViewer matlabViewer;
-
-    PetscObjectSetName((PetscObject) A, "myVar");
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.output", &matlabViewer);
-    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
-    MatView(A, matlabViewer);
-
-    PetscViewerDestroy(&matlabViewer);
-}
-
-void writeVec(Vec A) {
-    PetscViewer matlabViewer;
-
-    PetscObjectSetName((PetscObject) A, "myVar");
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.output", &matlabViewer);
-    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
-    VecView(A, matlabViewer);
-
-    PetscViewerDestroy(&matlabViewer);
 }
 
 // Calculate gamma
@@ -488,6 +339,7 @@ void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *
                 barOperatorPosition[1] = i + nx;
             }
         }
+//        cout << rowIndex << "\t\t" << barOperatorPosition[0] << "\t\t" << barOperatorPosition[1] << endl;
         MatSetValues(Ldds, 1, &rowIndex, 2, barOperatorPosition, barOperatorValue, INSERT_VALUES);
         rowIndex++;
     }
@@ -633,376 +485,7 @@ void vecExtract(Vec &V, PetscInt *nodeIndex, PetscInt n) {
     VecGetValues(V, n, nodeIndex, V_);
 //    VecDestroy(&V);
     VecCreate(PETSC_COMM_WORLD, &V); VecSetSizes(V, PETSC_DECIDE, n); VecSetFromOptions(V); VecSet(V, 0);
-
-    PetscInt *vectorIndex = new PetscInt[n];
-    for (int i = 0; i < n; i++) {
-        vectorIndex[i] = i;
-    }
-    VecSetValues(V, n, vectorIndex, V_, INSERT_VALUES);
-    VecAssemblyBegin(V);
-    VecAssemblyEnd(V);
-}
-
-void laplacianOperator(Mat &L, PetscInt nx, PetscInt ny, PetscScalar dx, PetscScalar dy, PetscInt *neumannBoundary, string variable) {
-    PetscScalar rowValue[5] = {};
-    PetscInt rowLocation[5] = {};
-    PetscScalar dx2 = pow(dx, 2);
-    PetscScalar dy2 = pow(dy, 2);
-    for (int i = 0; i < nx * ny; i++) {
-        if (i == 0) {
-            // South-west corner
-            rowValue[0] = - 2 / dx2 - 2 / dy2; rowValue[1] = 1 / dx2; rowValue[2] = 1 / dy2;
-            rowLocation[0] = i; rowLocation[1] = i + 1; rowLocation[2] = i + nx;
-            // Applying neumann boundary condition
-            rowValue[0] = rowValue[0] + neumannBoundary[1] * 1 / dx2 + neumannBoundary[0] * 1 / dy2;
-            // Fix for dirichlet boundary
-            if (neumannBoundary[0] == 0) {
-                if (variable == "U")
-                    rowValue[0] = rowValue[0] - 1 / dy2;
-                if (variable == "P")
-                    rowValue[0] = rowValue[0] - 1 / dy2;
-            }
-            if (neumannBoundary[1] == 0) {
-                if (variable == "V")
-                    rowValue[0] = rowValue[0] - 1 / dx2;
-                if (variable == "P")
-                    rowValue[0] = rowValue[0] - 1 / dx2;
-            }
-
-            if (variable == "P")
-                rowValue[0] = 1.5 * rowValue[0];
-
-            MatSetValues(L, 1, &i, 3, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if (i < nx - 1) {
-            // South-wall
-            rowValue[0] = 1 / dx2; rowValue[1] = -2 / dx2 - 2 / dy2; rowValue[2] = 1 / dx2; rowValue[3] = 1 / dy2;
-            rowLocation[0] = i - 1; rowLocation[1] = i; rowLocation[2] = i + 1; rowLocation[3] = i + nx;
-            // Applying neumann boundary condition
-            rowValue[1] = rowValue[1] + neumannBoundary[0] * 1 / dy2;
-            if (neumannBoundary[0] == 0) {
-                if (variable == "U")
-                    rowValue[1] = rowValue[1] - 1 / dy2;
-                if (variable == "P")
-                    rowValue[1] = rowValue[1] - 1 / dy2;
-            }
-
-            MatSetValues(L, 1, &i, 4, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if (i == (nx - 1)) {
-            // South-east corner
-            rowValue[0] = 1 / dx2; rowValue[1] = - 2 / dx2 - 2 / dy2; rowValue[2] = 1 / dy2;
-            rowLocation[0] = i - 1; rowLocation[1] = i; rowLocation[2] = i + nx;
-            // Applying neumann boundary condition
-            rowValue[1] = rowValue[1] + neumannBoundary[3] * 1 / dx2 + neumannBoundary[0] * 1 / dy2;
-
-            if (neumannBoundary[0] == 0) {
-                if (variable == "U")
-                    rowValue[1] = rowValue[1] - 1 / dy2;
-                if (variable == "P")
-                    rowValue[1] = rowValue[1] - 1 / dy2;
-            }
-            if (neumannBoundary[3] == 0) {
-                if (variable == "V")
-                    rowValue[1] = rowValue[1] - 1 / dx2;
-                if (variable == "P")
-                    rowValue[1] = rowValue[1] - 1 / dx2;
-            }
-
-            MatSetValues(L, 1, &i, 3, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if ((fmod(i, nx) == 0) && (i < nx * (ny - 1))) {
-            // west wall
-            rowValue[0] = 1 / dy2; rowValue[1] = - 2 / dx2 - 2 / dy2; rowValue[2] = 1 / dx2; rowValue[3] = 1 / dy2;
-            rowLocation[0] = i - nx; rowLocation[1] = i; rowLocation[2] = i + 1; rowLocation[3] = i + nx;
-            // Applying neumann boundary condition
-            rowValue[1] = rowValue[1] + neumannBoundary[1] * 1 / dx2;
-
-            if (neumannBoundary[1] == 0) {
-                if (variable == "V")
-                    rowValue[1] = rowValue[1] - 1 / dx2;
-                if (variable == "P")
-                    rowValue[1] = rowValue[1] - 1 / dx2;
-            }
-
-            MatSetValues(L, 1, &i, 4, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if ((fmod(i, nx) == nx - 1) && (i < nx * (ny - 1))) {
-            // East wall
-            rowValue[0] = 1 / dy2; rowValue[1] = 1 / dx2; rowValue[2] = - 2 / dx2 - 2 / dy2; rowValue[3] = 1 / dy2;
-            rowLocation[0] = i - nx; rowLocation[1] = i - 1; rowLocation[2] = i; rowLocation[3] = i + nx;
-            // Applying neumann boundary condition
-            rowValue[2] = rowValue[2] + neumannBoundary[3] * 1 / dx2;
-
-            if (neumannBoundary[3] == 0) {
-                if (variable == "V")
-                    rowValue[2] = rowValue[2] - 1 / dx2;
-                if (variable == "P")
-                    rowValue[2] = rowValue[2] - 1 / dx2;
-            }
-
-            MatSetValues(L, 1, &i, 4, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if (fmod(i, nx) == 0) {
-            // north-west corner
-            rowValue[0] = 1 / dy2; rowValue[1] = - 2 / dx2 - 2 / dy2; rowValue[2] = 1 / dx2;
-            rowLocation[0] = i - nx; rowLocation[1] = i; rowLocation[2] = i + 1;
-            // Applying neumann boundary condition
-            rowValue[1] = rowValue[1] + neumannBoundary[1] * 1 / dx2 + neumannBoundary[2] * 1 / dy2;
-
-            if (neumannBoundary[2] == 0) {
-                if (variable == "U")
-                    rowValue[1] = rowValue[1] - 1 / dy2;
-                if (variable == "P")
-                    rowValue[1] = rowValue[1] - 1 / dy2;
-            }
-            if (neumannBoundary[1] == 0) {
-                if (variable == "V")
-                    rowValue[1] = rowValue[1] - 1 / dx2;
-                if (variable == "P")
-                    rowValue[1] = rowValue[1] - 1 / dx2;
-            }
-
-            MatSetValues(L, 1, &i, 3, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if ((i > nx * (ny - 1)) && (i < nx * ny - 1)) {
-            // North-wall
-            rowValue[0] = 1 / dy2; rowValue[1] = 1 / dx2; rowValue[2] = - 2 / dx2 - 2 / dy2; rowValue[3] = 1 / dx2;
-            rowLocation[0] = i - nx; rowLocation[1] = i - 1; rowLocation[2] = i; rowLocation[3] = i + 1;
-            // Applying neumann boundary condition
-            rowValue[2] = rowValue[2] + neumannBoundary[2] * 1 / dy2;
-
-            if (neumannBoundary[2] == 0) {
-                if (variable == "U")
-                    rowValue[2] = rowValue[2] - 1 / dy2;
-                if (variable == "P")
-                    rowValue[2] = rowValue[2] - 1 / dy2;
-            }
-
-            MatSetValues(L, 1, &i, 4, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        if (i == nx * ny - 1) {
-            // north-east corner
-            rowValue[0] = 1 / dy2; rowValue[1] = 1 / dx2; rowValue[2] = - 2 / dx2 - 2 / dy2;
-            rowLocation[0] = i - nx; rowLocation[1] = i - 1; rowLocation[2] = i;
-            // Applying neumann boundary condition
-            rowValue[2] = rowValue[2] + neumannBoundary[3] * 1 / dx2 + neumannBoundary[2] * 1 / dy2;
-
-            if (neumannBoundary[2] == 0) {
-                if (variable == "U")
-                    rowValue[2] = rowValue[2] - 1 / dy2;
-                if (variable == "P")
-                    rowValue[2] = rowValue[2] - 1 / dy2;
-            }
-            if (neumannBoundary[3] == 0) {
-                if (variable == "V")
-                    rowValue[2] = rowValue[2] - 1 / dx2;
-                if (variable == "P")
-                    rowValue[2] = rowValue[2] - 1 / dx2;
-            }
-
-            MatSetValues(L, 1, &i, 3, rowLocation, rowValue, INSERT_VALUES);
-            continue;
-        }
-        rowValue[0] = 1 / dy2; rowValue[1] = 1 / dx2; rowValue[2] = - 2 / dx2 - 2 / dy2; rowValue[3] = 1 / dx2; rowValue[4] = 1 / dy2;
-        rowLocation[0] = i - nx; rowLocation[1] = i - 1; rowLocation[2] = i; rowLocation[3] = i + 1; rowLocation[4] = i + nx;
-        MatSetValues(L, 1, &i, 5, rowLocation, rowValue, INSERT_VALUES);
-    }
-    MatAssemblyBegin(L, MAT_FINAL_ASSEMBLY);
-    MatAssemblyEnd(L, MAT_FINAL_ASSEMBLY);
-//    MatView(L, PETSC_VIEWER_STDOUT_WORLD);
-//    PetscViewer matlabViewer;
-//    PetscObjectSetName((PetscObject) L, "myMat");
-//    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.output", &matlabViewer);
-//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
-//    MatView(L, matlabViewer);
-}
-
-void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
-                             PetscInt *southBoundaryIndex, PetscInt *southBoundaryGhostIndex,
-                             PetscInt *westBoundaryIndex, PetscInt *westBoundaryGhostIndex,
-                             PetscInt *northBoundaryIndex, PetscInt *northBoundaryGhostIndex,
-                             PetscInt *eastBoundaryIndex, PetscInt *eastBoundaryGhostIndex,
-                             PetscInt *isNeumannBoundary, PetscScalar *dirichletBoundary,
-                             PetscScalar dx, PetscScalar dy,
-                             Vec &XssBoundary, PetscReal dt, PetscReal Re, string variableType) {
-    /*
-     * South boundary
-     */
-    PetscScalar *southBoundaryValue = new PetscScalar[nx - 2]();
-    if (isNeumannBoundary[0] == 1) {
-//        cout << "Applying neumann boundary to south wall for " << variableType << endl;
-        VecGetValues(X, nx - 2, southBoundaryGhostIndex, southBoundaryValue);
-    }
-    else if (isNeumannBoundary[0] == 0) {
-//        cout << "Applying dirichelt boundary to south wall for " << variableType << endl;
-        VecGetValues(X, nx - 2, southBoundaryGhostIndex, southBoundaryValue);
-        if (variableType == "U") {
-            for (int i = 0; i < nx - 2; i++) {
-                southBoundaryValue[i] = 2 * dirichletBoundary[0] - southBoundaryValue[i];
-                VecSetValue(XssBoundary, southBoundaryIndex[i] - 1, dt / Re * southBoundaryValue[i] / pow(dy, 2.0), INSERT_VALUES); // for Xss boundary
-            }
-        }
-        else if (variableType == "V") {
-            std::fill_n(southBoundaryValue, nx - 2, dirichletBoundary[0]);
-            for (int i = 0; i < nx - 2; i++) {
-                VecSetValue(XssBoundary, southBoundaryIndex[i] - 1, dt / Re * southBoundaryValue[i] / pow(dy, 2.0), INSERT_VALUES); // for Xss boundary
-            }
-        }
-    }
-    VecSetValues(X, nx - 2, southBoundaryIndex, southBoundaryValue, INSERT_VALUES);
-
-    /*
-     * West boundary
-     */
-    PetscScalar *westBoundaryValue = new PetscScalar[ny - 2]();
-    if (isNeumannBoundary[1] == 1) {
-//        cout << "Applying neumann boundary to west wall for " << variableType << endl;
-        VecGetValues(X, ny - 2, westBoundaryGhostIndex, westBoundaryValue);
-    }
-    else if (isNeumannBoundary[1] == 0) {
-//        cout << "Applying dirichelt boundary to west wall for " << variableType << endl;
-        VecGetValues(X, ny - 2, westBoundaryGhostIndex, westBoundaryValue);
-        if (variableType == "V") {
-            for (int i = 0; i < ny - 2; i++) {
-                westBoundaryValue[i] = 2 * dirichletBoundary[1] - westBoundaryValue[i];
-                VecSetValue(XssBoundary, i * (nx - 2), dt / Re * westBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
-            }
-        }
-        else if (variableType == "U") {
-            std::fill_n(westBoundaryValue, ny - 2, dirichletBoundary[1]);
-            for (int i = 0; i < ny - 2; i++) {
-                VecSetValue(XssBoundary, i * (nx - 2), dt / Re * westBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
-            }
-        }
-    }
-    VecSetValues(X, ny - 2, westBoundaryIndex, westBoundaryValue, INSERT_VALUES);
-
-    /*
-     * North boundary
-     */
-    PetscScalar *northBoundaryValue = new PetscScalar[nx - 2]();
-    if (isNeumannBoundary[2] == 1) {
-//        cout << "Applying neumann boundary to north wall for " << variableType << endl;
-        VecGetValues(X, nx - 2, northBoundaryGhostIndex, northBoundaryValue);
-    }
-    else if (isNeumannBoundary[2] == 0) {
-//        cout << "Applying dirichelt boundary to north wall for " << variableType << endl;
-        VecGetValues(X, nx - 2, northBoundaryGhostIndex, northBoundaryValue);
-        if (variableType == "U") {
-            for (int i = 0; i < nx - 2; i++) {
-                northBoundaryValue[i] = 2 * dirichletBoundary[2] - northBoundaryValue[i];
-                VecSetValue(XssBoundary, i + (nx - 2) * (ny - 2 - 1), dt / Re * northBoundaryValue[i] / pow(dy, 2), INSERT_VALUES); // for Xss boundary
-            }
-        }
-        else if (variableType == "V") {
-            std::fill_n(northBoundaryValue, nx - 2, dirichletBoundary[2]);
-            for (int i = 0; i < nx - 2; i++) {
-                VecSetValue(XssBoundary, i + (nx - 2) * (ny - 2 - 1), dt / Re * northBoundaryValue[i] / pow(dy, 2), INSERT_VALUES); // for Xss boundary
-            }
-        }
-    }
-    VecSetValues(X, nx - 2, northBoundaryIndex, northBoundaryValue, INSERT_VALUES);
-
-    /*
-     * East boundary
-     */
-    PetscScalar *eastBoundaryValue = new PetscScalar[ny - 2]();
-    if (isNeumannBoundary[3] == 1) {
-//        cout << "Applying neumann boundary to east wall for " << variableType << endl;
-        VecGetValues(X, ny - 2, eastBoundaryGhostIndex, eastBoundaryValue);
-    }
-    else if (isNeumannBoundary[3] == 0) {
-//        cout << "Applying dirichelt boundary to east wall for " << variableType << endl;
-        VecGetValues(X, ny - 2, eastBoundaryGhostIndex, eastBoundaryValue);
-        if (variableType == "V") {
-            for (int i = 0; i < ny - 2; i++) {
-                eastBoundaryValue[i] = 2 * dirichletBoundary[3] - eastBoundaryValue[i];
-                VecSetValue(XssBoundary, i * (nx - 2) + (nx - 2) - 1, dt / Re * eastBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
-            }
-        }
-        else if (variableType == "U") {
-            std::fill_n(eastBoundaryValue, ny - 2, dirichletBoundary[3]);
-            for (int i = 0; i < ny - 2; i++) {
-                VecSetValue(XssBoundary, i * (nx - 2) + (nx - 2) - 1, dt / Re * eastBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
-            }
-        }
-    }
-    VecSetValues(X, ny - 2, eastBoundaryIndex, eastBoundaryValue, INSERT_VALUES);
-
-    /*
-     * Assembling vectors
-     */
-    VecAssemblyBegin(X); VecAssemblyEnd(X);
-    VecAssemblyBegin(XssBoundary); VecAssemblyEnd(XssBoundary);
-}
-
-void calculatePressure(Vec &P, Mat LdUdX, Vec U, Mat LdVdY, Vec V, Mat Lp, PetscReal dt) {
-    PetscInt nU, nV, temp;
-    MatGetSize(LdUdX, &nU, &temp);
-    MatGetSize(LdVdY, &nV, &temp);
-
-    // Define variables to hold the differentiated velocity and pressure fields
-    Vec dUdX; VecCreate(PETSC_COMM_WORLD, &dUdX); VecSetSizes(dUdX, PETSC_DECIDE, nU); VecSetFromOptions(dUdX); VecSet(dUdX, 0);
-    Vec dVdY; VecCreate(PETSC_COMM_WORLD, &dVdY); VecSetSizes(dVdY, PETSC_DECIDE, nV); VecSetFromOptions(dVdY); VecSet(dVdY, 0);
-
-    MatMult(LdUdX, U, dUdX);
-    MatMult(LdVdY, V, dVdY);
-
-    // Creating the right-hand-side of the pressure correction
-    Vec RHS; VecDuplicate(dUdX, &RHS);
-    VecWAXPY(RHS, 1.0, dUdX, dVdY);
-    VecScale(RHS, 1 / dt);
-
-    // solving for pressure term
-    KSP pSolver; KSPCreate(PETSC_COMM_WORLD, &pSolver); KSPSetOperators(pSolver, Lp, Lp); KSPSetFromOptions(pSolver);
-    KSPSolve(pSolver, RHS, P);
-
-    VecDestroy(&dUdX); VecDestroy(&dVdY);
-    VecDestroy(&RHS);
-    KSPDestroy(&pSolver);
-}
-
-void correctVelocity(Vec Uss, Vec Vss, Mat LdPdX, Mat LdPdY, Vec P, PetscReal dt,
-                     PetscInt *uInteriorIndex, PetscInt *vInteriorIndex, Vec &U, Vec &V) {
-    Vec dPdX, dPdY;
-    VecDuplicate(Uss, &dPdX);
-    VecDuplicate(Vss, &dPdY);
-
-    MatMult(LdPdX, P, dPdX);
-    MatMult(LdPdY, P, dPdY);
-
-    VecScale(dPdX, -dt);
-    VecScale(dPdY, -dt);
-
-    Vec Urhs, Vrhs;
-    VecDuplicate(Uss, &Urhs);
-    VecDuplicate(Vss, &Vrhs);
-
-    VecWAXPY(Urhs, 1.0, Uss, dPdX);
-    VecWAXPY(Vrhs, 1.0, Vss, dPdY);
-
-    PetscInt nUss, nVss;
-    VecGetSize(Uss, &nUss);
-    VecGetSize(Vss, &nVss);
-    PetscScalar *Urhs_ = new PetscScalar[nUss];
-    PetscScalar *Vrhs_ = new PetscScalar[nVss];
-
-    VecGetArray(Urhs, &Urhs_);
-    VecGetArray(Vrhs, &Vrhs_);
-
-    VecSetValues(U, nUss, uInteriorIndex, Urhs_, INSERT_VALUES);
-    VecSetValues(V, nVss, vInteriorIndex, Vrhs_, INSERT_VALUES);
-
-    VecDestroy(&dPdX); VecDestroy(&dPdY);
-    VecDestroy(&Urhs); VecDestroy(&Vrhs);
+    VecRestoreArray(V, &V_);
 }
 //    /*
 //     * Track the boundary and interior indices for different variables
