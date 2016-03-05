@@ -59,7 +59,7 @@ int main(int argc, char **args) {
      * Physical Properties
      */
     PetscReal dt = 0.01; // Time step
-    PetscReal tf = 0.04; // Number of time steps
+    PetscReal tf = 0.01; // Number of time steps
 
     /*
      * Flow properties
@@ -145,8 +145,6 @@ int main(int argc, char **args) {
 //    PetscScalar* V = new PetscScalar[nVx * nVy]; // v-velocity with boundaries
 //    PetscScalar* P = new PetscScalar[nPx * nPy]; // pressure with boundaries
     Vec U, V, P;
-    Vec Uhbar, Uvbar, Uhtilde, Uvtilde;
-    Vec Vhbar, Vvbar, Vhtilde, Vvtilde;
 
     // Creating and initializing vectors for holding u and v velocities and pressure
     VecCreate(PETSC_COMM_WORLD, &U); VecSetSizes(U, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(U); VecSet(U, 0);
@@ -175,6 +173,7 @@ int main(int argc, char **args) {
                             vIsNeumannBoundary, vDirichletBoundary,
                             dx, dy,
                             VssBoundary, dt, Re, "V");
+
 
     /*
      * Calculate gamma
@@ -244,6 +243,7 @@ int main(int argc, char **args) {
     calculateStarVariable(LUhbar, LUhtilde, LUvbar, LUvtilde, LdUsdX, LdUsdY, nUx, nUy, U, Us, uInteriorIndex,
                           LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, vInteriorIndex,
                           gamma, dt);
+
 
     /*
      * Define Laplacian operator
@@ -403,7 +403,10 @@ void writeVec(Vec A) {
 
     PetscObjectSetName((PetscObject) A, "myVar");
     PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.output", &matlabViewer);
-    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
+//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
+    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_COMMON);
+//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_DEFAULT);
+//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_DRAW_CONTOUR);
     VecView(A, matlabViewer);
 
     PetscViewerDestroy(&matlabViewer);
@@ -870,13 +873,13 @@ void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
         if (variableType == "U") {
             for (int i = 0; i < nx - 2; i++) {
                 southBoundaryValue[i] = 2 * dirichletBoundary[0] - southBoundaryValue[i];
-                VecSetValue(XssBoundary, southBoundaryIndex[i] - 1, dt / Re * southBoundaryValue[i] / pow(dy, 2.0), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, southBoundaryIndex[i] - 1, dt / Re * southBoundaryValue[i] / pow(dy, 2.0), ADD_VALUES); // for Xss boundary
             }
         }
         else if (variableType == "V") {
             std::fill_n(southBoundaryValue, nx - 2, dirichletBoundary[0]);
             for (int i = 0; i < nx - 2; i++) {
-                VecSetValue(XssBoundary, southBoundaryIndex[i] - 1, dt / Re * southBoundaryValue[i] / pow(dy, 2.0), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, southBoundaryIndex[i] - 1, dt / Re * southBoundaryValue[i] / pow(dy, 2.0), ADD_VALUES); // for Xss boundary
             }
         }
     }
@@ -896,13 +899,13 @@ void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
         if (variableType == "V") {
             for (int i = 0; i < ny - 2; i++) {
                 westBoundaryValue[i] = 2 * dirichletBoundary[1] - westBoundaryValue[i];
-                VecSetValue(XssBoundary, i * (nx - 2), dt / Re * westBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, i * (nx - 2), dt / Re * westBoundaryValue[i] / pow(dx, 2), ADD_VALUES); // for Xss boundary
             }
         }
         else if (variableType == "U") {
             std::fill_n(westBoundaryValue, ny - 2, dirichletBoundary[1]);
             for (int i = 0; i < ny - 2; i++) {
-                VecSetValue(XssBoundary, i * (nx - 2), dt / Re * westBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, i * (nx - 2), dt / Re * westBoundaryValue[i] / pow(dx, 2), ADD_VALUES); // for Xss boundary
             }
         }
     }
@@ -922,13 +925,13 @@ void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
         if (variableType == "U") {
             for (int i = 0; i < nx - 2; i++) {
                 northBoundaryValue[i] = 2 * dirichletBoundary[2] - northBoundaryValue[i];
-                VecSetValue(XssBoundary, i + (nx - 2) * (ny - 2 - 1), dt / Re * northBoundaryValue[i] / pow(dy, 2), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, i + (nx - 2) * (ny - 2 - 1), dt / Re * northBoundaryValue[i] / pow(dy, 2), ADD_VALUES); // for Xss boundary
             }
         }
         else if (variableType == "V") {
             std::fill_n(northBoundaryValue, nx - 2, dirichletBoundary[2]);
             for (int i = 0; i < nx - 2; i++) {
-                VecSetValue(XssBoundary, i + (nx - 2) * (ny - 2 - 1), dt / Re * northBoundaryValue[i] / pow(dy, 2), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, i + (nx - 2) * (ny - 2 - 1), dt / Re * northBoundaryValue[i] / pow(dy, 2), ADD_VALUES); // for Xss boundary
             }
         }
     }
@@ -948,13 +951,13 @@ void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
         if (variableType == "V") {
             for (int i = 0; i < ny - 2; i++) {
                 eastBoundaryValue[i] = 2 * dirichletBoundary[3] - eastBoundaryValue[i];
-                VecSetValue(XssBoundary, i * (nx - 2) + (nx - 2) - 1, dt / Re * eastBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, i * (nx - 2) + (nx - 2) - 1, dt / Re * eastBoundaryValue[i] / pow(dx, 2), ADD_VALUES); // for Xss boundary
             }
         }
         else if (variableType == "U") {
             std::fill_n(eastBoundaryValue, ny - 2, dirichletBoundary[3]);
             for (int i = 0; i < ny - 2; i++) {
-                VecSetValue(XssBoundary, i * (nx - 2) + (nx - 2) - 1, dt / Re * eastBoundaryValue[i] / pow(dx, 2), INSERT_VALUES); // for Xss boundary
+                VecSetValue(XssBoundary, i * (nx - 2) + (nx - 2) - 1, dt / Re * eastBoundaryValue[i] / pow(dx, 2), ADD_VALUES); // for Xss boundary
             }
         }
     }
@@ -1026,7 +1029,6 @@ void correctVelocity(Vec Uss, Vec Vss, Mat LdPdX, Mat LdPdY, Vec P, PetscReal dt
     VecSetValues(U, nUss, uInteriorIndex, Urhs_, INSERT_VALUES);
     VecSetValues(V, nVss, vInteriorIndex, Vrhs_, INSERT_VALUES);
 
-    writeVec(U);
     VecDestroy(&dPdX); VecDestroy(&dPdY);
     VecDestroy(&Urhs); VecDestroy(&Vrhs);
 }
