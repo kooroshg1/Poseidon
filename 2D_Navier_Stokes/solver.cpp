@@ -59,7 +59,7 @@ int main(int argc, char **args) {
      * Physical Properties
      */
     PetscReal dt = 0.01; // Time step
-    PetscReal tf = 0.01; // Number of time steps
+    PetscReal tf = 0.02; // Number of time steps
 
     /*
      * Flow properties
@@ -174,7 +174,6 @@ int main(int argc, char **args) {
                             dx, dy,
                             VssBoundary, dt, Re, "V");
 
-
     /*
      * Calculate gamma
      */
@@ -243,7 +242,6 @@ int main(int argc, char **args) {
     calculateStarVariable(LUhbar, LUhtilde, LUvbar, LUvtilde, LdUsdX, LdUsdY, nUx, nUy, U, Us, uInteriorIndex,
                           LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, vInteriorIndex,
                           gamma, dt);
-
 
     /*
      * Define Laplacian operator
@@ -342,12 +340,30 @@ int main(int argc, char **args) {
 
         KSPSolve(uSolver, UssBoundary, Uss);
         KSPSolve(vSolver, VssBoundary, Vss);
-
+        writeVec(Vss);
         calculatePressure(P, LdUdX, U, LdVdY, V, Lp, dt);
 
         correctVelocity(Uss, Vss, LdPdX, LdPdY, P, dt, uInteriorIndex, vInteriorIndex, U, V);
     }
-    writeVec(U);
+    // Correct boundaries
+    assignBoundaryCondition(U, nUx, nUy,
+                            uSouthBoundaryIndex, uSouthGhostBoundaryIndex,
+                            uWestBoundaryIndex, uWestGhostBoundaryIndex,
+                            uNorthBoundaryIndex, uNorthGhostBoundaryIndex,
+                            uEastBoundaryIndex, uEastGhostBoundaryIndex,
+                            uIsNeumannBoundary, uDirichletBoundary,
+                            dx, dy,
+                            UssBoundary, dt, Re, "U");
+
+    assignBoundaryCondition(V, nVx, nVy,
+                            vSouthBoundaryIndex, vSouthGhostBoundaryIndex,
+                            vWestBoundaryIndex, vWestGhostBoundaryIndex,
+                            vNorthBoundaryIndex, vNorthGhostBoundaryIndex,
+                            vEastBoundaryIndex, vEastGhostBoundaryIndex,
+                            vIsNeumannBoundary, vDirichletBoundary,
+                            dx, dy,
+                            VssBoundary, dt, Re, "V");
+//    writeVec(U);
 //    writeVec(V);
 //    writeVec(P);
 
@@ -859,6 +875,7 @@ void assignBoundaryCondition(Vec &X, PetscInt nx, PetscInt ny,
                              PetscInt *isNeumannBoundary, PetscScalar *dirichletBoundary,
                              PetscScalar dx, PetscScalar dy,
                              Vec &XssBoundary, PetscReal dt, PetscReal Re, string variableType) {
+    VecSet(XssBoundary, 0);
     /*
      * South boundary
      */

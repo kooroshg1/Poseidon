@@ -9,24 +9,22 @@
     <orderEntry type="module-library">
       <library name="Header Search Paths">
         <CLASSES>
-          <root url="file:///usr/lib/openmpi/include" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include" />
           <root url="file:///usr/include" />
           <root url="file:///usr/local/include" />
-          <root url="file://$USER_HOME$/Tools/include" />
-          <root url="file://$USER_HOME$/Tools/petsc-3.6.3/include" />
-          <root url="file://$USER_HOME$/Tools/petsc-3.6.3/arch-linux2-c-debug/include" />
+          <root url="file://$MODULE_DIR$/../../../Tools/include" />
+          <root url="file://$MODULE_DIR$/../../../Tools/petsc-3.6.3/include" />
+          <root url="file://$MODULE_DIR$/../../../Tools/petsc-3.6.3/arch-linux2-c-debug/include" />
         </CLASSES>
         <SOURCES>
-          <root url="file:///usr/lib/openmpi/include" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include-fixed" />
           <root url="file:///usr/lib/gcc/x86_64-linux-gnu/4.8/include" />
           <root url="file:///usr/include" />
           <root url="file:///usr/local/include" />
-          <root url="file://$USER_HOME$/Tools/include" />
-          <root url="file://$USER_HOME$/Tools/petsc-3.6.3/include" />
-          <root url="file://$USER_HOME$/Tools/petsc-3.6.3/arch-linux2-c-debug/include" />
+          <root url="file://$MODULE_DIR$/../../../Tools/include" />
+          <root url="file://$MODULE_DIR$/../../../Tools/petsc-3.6.3/include" />
+          <root url="file://$MODULE_DIR$/../../../Tools/petsc-3.6.3/arch-linux2-c-debug/include" />
         </SOURCES>
       </library>
     </orderEntry>

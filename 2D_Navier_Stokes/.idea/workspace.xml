@@ -6,7 +6,7 @@
       <config projectName="2D_Navier_Stokes" targetName="2D_Navier_Stokes" />
     </generated>
   </component>
-  <component name="CMakeSettings" AUTO_RELOAD="false" GENERATION_PASS_SYSTEM_ENVIRONMENT="true">
+  <component name="CMakeSettings" AUTO_RELOAD="false" GENERATION_PASS_SYSTEM_ENVIRONMENT="true" BUILD_OUTPUT_DIR="$PROJECT_DIR$">
     <ADDITIONAL_GENERATION_ENVIRONMENT>
       <envs />
     </ADDITIONAL_GENERATION_ENVIRONMENT>
@@ -36,7 +36,7 @@
         <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
           <provider selected="true" editor-type-id="text-editor">
             <state vertical-scroll-proportion="0.0">
-              <caret line="14" column="30" selection-start-line="14" selection-start-column="30" selection-end-line="14" selection-end-column="30" />
+              <caret line="9" column="45" selection-start-line="9" selection-start-column="45" selection-end-line="9" selection-end-column="45" />
               <folding />
             </state>
           </provider>
@@ -45,23 +45,23 @@
       <file leaf-file-name="solver.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/solver.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.33993903">
-              <caret line="196" column="0" selection-start-line="196" selection-start-column="0" selection-end-line="196" selection-end-column="0" />
+            <state vertical-scroll-proportion="0.14820592">
+              <caret line="259" column="0" selection-start-line="259" selection-start-column="0" selection-end-line="259" selection-end-column="0" />
               <folding>
-                <element signature="e#89#109#0" expanded="true" />
-                <element signature="e#20402#20580#0" expanded="false" />
-                <element signature="e#20582#20811#0" expanded="false" />
-                <element signature="e#20813#21133#0" expanded="false" />
-                <element signature="e#21659#22145#0" expanded="false" />
-                <element signature="e#22147#23841#0" expanded="false" />
-                <element signature="e#23843#25261#0" expanded="false" />
-                <element signature="e#25263#31348#0" expanded="false" />
-                <element signature="e#31350#31837#0" expanded="false" />
-                <element signature="e#31839#40063#0" expanded="false" />
-                <element signature="e#46025#47054#0" expanded="false" />
-                <element signature="e#48033#50485#0" expanded="false" />
-                <element signature="e#50487#52910#0" expanded="false" />
-                <element signature="e#52912#53853#0" expanded="false" />
+                <element signature="e#21443#21621#0" expanded="false" />
+                <element signature="e#21623#21852#0" expanded="false" />
+                <element signature="e#21854#22174#0" expanded="false" />
+                <element signature="e#22700#23186#0" expanded="false" />
+                <element signature="e#23188#24882#0" expanded="false" />
+                <element signature="e#24884#26302#0" expanded="false" />
+                <element signature="e#26304#32389#0" expanded="false" />
+                <element signature="e#32391#32878#0" expanded="false" />
+                <element signature="e#32880#41104#0" expanded="false" />
+                <element signature="e#41106#47092#0" expanded="false" />
+                <element signature="e#47094#48123#0" expanded="false" />
+                <element signature="e#49102#51554#0" expanded="false" />
+                <element signature="e#51556#53979#0" expanded="false" />
+                <element signature="e#53981#54922#0" expanded="false" />
               </folding>
             </state>
           </provider>
@@ -84,10 +84,10 @@
     <detection-done>true</detection-done>
   </component>
   <component name="ProjectFrameBounds">
-    <option name="x" value="65" />
-    <option name="y" value="-4" />
-    <option name="width" value="1855" />
-    <option name="height" value="1084" />
+    <option name="x" value="98" />
+    <option name="y" value="36" />
+    <option name="width" value="1822" />
+    <option name="height" value="1044" />
   </component>
   <component name="ProjectInspectionProfilesVisibleTreeState">
     <entry key="Project Default">
@@ -153,9 +153,9 @@
     </panes>
   </component>
   <component name="PropertiesComponent">
-    <property name="settings.editor.selected.configurable" value="preferences.sourceCode.CMake" />
+    <property name="settings.editor.selected.configurable" value="CMakeSettings" />
     <property name="settings.editor.splitter.proportion" value="0.2" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$/main.cpp" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
   </component>
   <component name="RunManager" selected="Application.NSsolver">
     <configuration default="true" type="CMakeGoogleTestRunConfigurationType" factoryName="Google Test" PASS_PARENT_ENVS="FALSE" PROJECT_NAME="NSsolver" TARGET_NAME="NSsolver" CONFIG_NAME="Debug" TEST_MODE="SUITE_TEST">
@@ -215,16 +215,17 @@
     <servers />
   </component>
   <component name="ToolWindowManager">
-    <frame x="65" y="-4" width="1855" height="1084" extended-state="6" />
-    <editor active="true" />
+    <frame x="98" y="36" width="1822" height="1044" extended-state="6" />
+    <editor active="false" />
     <layout>
-      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.12718341" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
+      <window_info id="Project" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.12678376" sideWeight="0.5" order="0" side_tool="false" content_ui="combo" />
       <window_info id="TODO" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="6" side_tool="false" content_ui="tabs" />
-      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33472368" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="Messages" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33403805" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
+      <window_info id="CMake" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33932346" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Event Log" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="true" content_ui="tabs" />
+      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Version Control" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
-      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="true" show_stripe_button="true" weight="0.28467155" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
+      <window_info id="Run" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.2843552" sideWeight="0.5" order="2" side_tool="false" content_ui="tabs" />
       <window_info id="Structure" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Terminal" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="7" side_tool="false" content_ui="tabs" />
       <window_info id="Favorites" active="false" anchor="left" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="2" side_tool="true" content_ui="tabs" />
@@ -234,7 +235,6 @@
       <window_info id="Commander" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="0" side_tool="false" content_ui="tabs" />
       <window_info id="Inspection" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.4" sideWeight="0.5" order="5" side_tool="false" content_ui="tabs" />
       <window_info id="Hierarchy" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="2" side_tool="false" content_ui="combo" />
-      <window_info id="Find" active="false" anchor="bottom" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.33" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
       <window_info id="Ant Build" active="false" anchor="right" auto_hide="false" internal_type="DOCKED" type="DOCKED" visible="false" show_stripe_button="true" weight="0.25" sideWeight="0.5" order="1" side_tool="false" content_ui="tabs" />
     </layout>
   </component>
@@ -265,33 +265,46 @@
     </breakpoint-manager>
     <watches-manager />
   </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <PATH>
+      <PATH_ELEMENT>
+        <option name="myItemId" value="2D_Navier_Stokes" />
+        <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.ProjectViewProjectNode" />
+      </PATH_ELEMENT>
+      <PATH_ELEMENT>
+        <option name="myItemId" value="2D_Navier_Stokes" />
+        <option name="myItemType" value="com.intellij.ide.projectView.impl.nodes.PsiDirectoryNode" />
+      </PATH_ELEMENT>
+    </PATH>
+  </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="15" column="30" selection-start-line="15" selection-start-column="30" selection-end-line="15" selection-end-column="30" />
+          <caret line="14" column="30" selection-start-line="14" selection-start-column="30" selection-end-line="14" selection-end-column="30" />
           <folding />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/main.cpp">
+    <entry file="file://$PROJECT_DIR$/solver.cpp">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
           <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
           <folding>
-            <element signature="e#89#109#0" expanded="false" />
-            <element signature="e#20566#20744#0" expanded="false" />
-            <element signature="e#20746#20975#0" expanded="false" />
-            <element signature="e#20977#21297#0" expanded="false" />
-            <element signature="e#21299#21619#0" expanded="false" />
-            <element signature="e#21621#22107#0" expanded="false" />
-            <element signature="e#22109#23803#0" expanded="false" />
-            <element signature="e#23805#25223#0" expanded="false" />
-            <element signature="e#25225#31310#0" expanded="false" />
-            <element signature="e#31312#31799#0" expanded="false" />
-            <element signature="e#31801#40025#0" expanded="false" />
-            <element signature="e#40027#46009#0" expanded="false" />
-            <element signature="e#46011#47038#0" expanded="false" />
+            <element signature="e#21443#21621#0" expanded="false" />
+            <element signature="e#21623#21852#0" expanded="false" />
+            <element signature="e#21854#22174#0" expanded="false" />
+            <element signature="e#22700#23186#0" expanded="false" />
+            <element signature="e#23188#24882#0" expanded="false" />
+            <element signature="e#24884#26302#0" expanded="false" />
+            <element signature="e#26304#32389#0" expanded="false" />
+            <element signature="e#32391#32878#0" expanded="false" />
+            <element signature="e#32880#41104#0" expanded="false" />
+            <element signature="e#41106#47092#0" expanded="false" />
+            <element signature="e#47094#48123#0" expanded="false" />
+            <element signature="e#49102#51554#0" expanded="false" />
+            <element signature="e#51556#53979#0" expanded="false" />
+            <element signature="e#53981#54922#0" expanded="false" />
           </folding>
         </state>
       </provider>
@@ -514,6 +527,36 @@
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/main.cpp">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="0" column="0" selection-start-line="0" selection-start-column="0" selection-end-line="0" selection-end-column="0" />
+          <folding>
+            <element signature="e#89#109#0" expanded="false" />
+            <element signature="e#20566#20744#0" expanded="false" />
+            <element signature="e#20746#20975#0" expanded="false" />
+            <element signature="e#20977#21297#0" expanded="false" />
+            <element signature="e#21299#21619#0" expanded="false" />
+            <element signature="e#21621#22107#0" expanded="false" />
+            <element signature="e#22109#23803#0" expanded="false" />
+            <element signature="e#23805#25223#0" expanded="false" />
+            <element signature="e#25225#31310#0" expanded="false" />
+            <element signature="e#31312#31799#0" expanded="false" />
+            <element signature="e#31801#40025#0" expanded="false" />
+            <element signature="e#40027#46009#0" expanded="false" />
+            <element signature="e#46011#47038#0" expanded="false" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state vertical-scroll-proportion="0.0">
+          <caret line="15" column="30" selection-start-line="15" selection-start-column="30" selection-end-line="15" selection-end-column="30" />
+          <folding />
+        </state>
+      </provider>
+    </entry>
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
@@ -631,43 +674,6 @@
             <element signature="e#40027#46009#0" expanded="false" />
             <element signature="e#46011#47038#0" expanded="false" />
           </folding>
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/Tools/petsc-3.6.3/src/vec/vec/interface/rvector.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33214286">
-          <caret line="882" column="0" selection-start-line="882" selection-start-column="0" selection-end-line="882" selection-end-column="0" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/Tools/petsc-3.6.3/include/petscvec.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33333334">
-          <caret line="246" column="35" selection-start-line="246" selection-start-column="35" selection-end-line="246" selection-end-column="35" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/Tools/petsc-3.6.3/src/mat/impls/aij/seq/aij.c">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.7178571">
-          <caret line="1000" column="11" selection-start-line="1000" selection-start-column="11" selection-end-line="1000" selection-end-column="11" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/Tools/petsc-3.6.3/include/petscsys.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33231708">
-          <caret line="240" column="12" selection-start-line="240" selection-start-column="12" selection-end-line="240" selection-end-column="12" />
-          <folding />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$USER_HOME$/Tools/petsc-3.6.3/include/petscmat.h">
-      <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33231708">
-          <caret line="17" column="33" selection-start-line="17" selection-start-column="33" selection-end-line="17" selection-end-column="36" />
-          <folding />
         </state>
       </provider>
     </entry>
@@ -696,33 +702,48 @@
     <entry file="file://$PROJECT_DIR$/CMakeLists.txt">
       <provider selected="true" editor-type-id="text-editor">
         <state vertical-scroll-proportion="0.0">
-          <caret line="14" column="30" selection-start-line="14" selection-start-column="30" selection-end-line="14" selection-end-column="30" />
+          <caret line="9" column="45" selection-start-line="9" selection-start-column="45" selection-end-line="9" selection-end-column="45" />
           <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/solver.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.33993903">
-          <caret line="196" column="0" selection-start-line="196" selection-start-column="0" selection-end-line="196" selection-end-column="0" />
+        <state vertical-scroll-proportion="0.14820592">
+          <caret line="259" column="0" selection-start-line="259" selection-start-column="0" selection-end-line="259" selection-end-column="0" />
           <folding>
-            <element signature="e#89#109#0" expanded="true" />
-            <element signature="e#20402#20580#0" expanded="false" />
-            <element signature="e#20582#20811#0" expanded="false" />
-            <element signature="e#20813#21133#0" expanded="false" />
-            <element signature="e#21659#22145#0" expanded="false" />
-            <element signature="e#22147#23841#0" expanded="false" />
-            <element signature="e#23843#25261#0" expanded="false" />
-            <element signature="e#25263#31348#0" expanded="false" />
-            <element signature="e#31350#31837#0" expanded="false" />
-            <element signature="e#31839#40063#0" expanded="false" />
-            <element signature="e#46025#47054#0" expanded="false" />
-            <element signature="e#48033#50485#0" expanded="false" />
-            <element signature="e#50487#52910#0" expanded="false" />
-            <element signature="e#52912#53853#0" expanded="false" />
+            <element signature="e#21443#21621#0" expanded="false" />
+            <element signature="e#21623#21852#0" expanded="false" />
+            <element signature="e#21854#22174#0" expanded="false" />
+            <element signature="e#22700#23186#0" expanded="false" />
+            <element signature="e#23188#24882#0" expanded="false" />
+            <element signature="e#24884#26302#0" expanded="false" />
+            <element signature="e#26304#32389#0" expanded="false" />
+            <element signature="e#32391#32878#0" expanded="false" />
+            <element signature="e#32880#41104#0" expanded="false" />
+            <element signature="e#41106#47092#0" expanded="false" />
+            <element signature="e#47094#48123#0" expanded="false" />
+            <element signature="e#49102#51554#0" expanded="false" />
+            <element signature="e#51556#53979#0" expanded="false" />
+            <element signature="e#53981#54922#0" expanded="false" />
           </folding>
         </state>
       </provider>
     </entry>
+  </component>
+  <component name="masterDetails">
+    <states>
+      <state key="ScopeChooserConfigurable.UI">
+        <settings>
+          <splitter-proportions>
+            <option name="proportions">
+              <list>
+                <option value="0.2" />
+              </list>
+            </option>
+          </splitter-proportions>
+        </settings>
+      </state>
+    </states>
   </component>
 </project>
