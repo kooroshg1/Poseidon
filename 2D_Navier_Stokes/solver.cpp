@@ -59,7 +59,7 @@ int main(int argc, char **args) {
      * Physical Properties
      */
     PetscReal dt = 0.01; // Time step
-    PetscReal tf = 0.02; // Number of time steps
+    PetscReal tf = 0.03; // Number of time steps
 
     /*
      * Flow properties
@@ -314,6 +314,11 @@ int main(int argc, char **args) {
         t = it * dt;
         it++;
         cout << "time = " << t << endl;
+
+        VecSet(Us, 0); VecSet(Vs, 0);
+        VecSet(Uss, 0); VecSet(Vss, 0);
+        VecSet(P, 0.0);
+
         PetscReal gamma = calculateGamma(dt, U, V);
 
         assignBoundaryCondition(U, nUx, nUy,
@@ -340,7 +345,7 @@ int main(int argc, char **args) {
 
         KSPSolve(uSolver, UssBoundary, Uss);
         KSPSolve(vSolver, VssBoundary, Vss);
-        writeVec(Vss);
+
         calculatePressure(P, LdUdX, U, LdVdY, V, Lp, dt);
 
         correctVelocity(Uss, Vss, LdPdX, LdPdY, P, dt, uInteriorIndex, vInteriorIndex, U, V);
@@ -406,8 +411,8 @@ void showMatrixSize(Mat A) {
 void writeMat(Mat A) {
     PetscViewer matlabViewer;
 
-    PetscObjectSetName((PetscObject) A, "myVar");
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.output", &matlabViewer);
+    PetscObjectSetName((PetscObject) A, "X_");
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.m", &matlabViewer);
     PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
     MatView(A, matlabViewer);
 
@@ -417,10 +422,10 @@ void writeMat(Mat A) {
 void writeVec(Vec A) {
     PetscViewer matlabViewer;
 
-    PetscObjectSetName((PetscObject) A, "myVar");
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.output", &matlabViewer);
-//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
-    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_COMMON);
+    PetscObjectSetName((PetscObject) A, "X_");
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.m", &matlabViewer);
+    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
+//    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_COMMON);
 //    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_DEFAULT);
 //    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_DRAW_CONTOUR);
     VecView(A, matlabViewer);

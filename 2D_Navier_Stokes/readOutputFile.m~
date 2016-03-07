@@ -1,25 +1,9 @@
-% clear all;
+clear all;
 close all;
 format short g;
 % clc;
 % ============================== %
-nx = 5;
-ny = 3;
- 
-% For U
-% nx = nx + 1; ny = ny + 2;
-% For V
-% nx = nx + 2; ny = ny + 1;
-% for Us
-% nx = nx - 1; ny = ny;
-% for Vs
-% nx = nx; ny = ny - 1;
-
 cd Debug
-operator
-X_ = reshape(X_, nx, ny);
-X_
-% full(myVar)
 cd ..
 % ============================== %
 
