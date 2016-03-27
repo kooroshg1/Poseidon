@@ -21,8 +21,8 @@ void poseidonGetPIndex(PetscInt nPx, PetscInt nPy, PetscInt *pBoundaryIndex, Pet
 
 void showVectorSize(Vec A);
 void showMatrixSize(Mat A);
-void writeMat(Mat A);
-void writeVec(Vec A);
+void writeMat(Mat A, string variableName, string fileName);
+void writeVec(Vec A, string veriableName, string fileName);
 void Xbar_tilde(PetscInt nx, PetscInt ny, Mat &Lhbar, PetscInt *skipCode, string indicator, string direction);
 PetscScalar calculateGamma(PetscScalar dt, Vec &U, Vec &V);
 void diffOperator(PetscInt nx, PetscInt ny, PetscScalar ds, Mat Ldds, PetscInt *skipCode, string direction);
@@ -59,12 +59,12 @@ int main(int argc, char **args) {
      * Physical Properties
      */
     PetscReal dt = 0.01; // Time step
-    PetscReal tf = 0.03; // Number of time steps
+    PetscReal tf = 10; // Number of time steps
 
     /*
      * Flow properties
      */
-    PetscReal Re = 100;
+    PetscReal Re = 1000;
 
     /*
      * Boundary condition type and values
@@ -83,7 +83,7 @@ int main(int argc, char **args) {
     /*
      * Domain dimensions and properties
      */
-    PetscInt nx = 5, ny = 3; // Number pressure nodes in the domain, without boundaries
+    PetscInt nx = 100, ny = 100; // Number pressure nodes in the domain, without boundaries
     PetscReal lx = 1.0, ly = 1.0; // Domain dimension in x and y directions
 
     PetscReal dx = lx / nx, dy = ly / ny; // Grid spacing in x and y directions
@@ -145,6 +145,13 @@ int main(int argc, char **args) {
 //    PetscScalar* V = new PetscScalar[nVx * nVy]; // v-velocity with boundaries
 //    PetscScalar* P = new PetscScalar[nPx * nPy]; // pressure with boundaries
     Vec U, V, P;
+    Vec Uerr, Verr, Perr; // These vectors are used for error calculation between two time steps
+
+    /*
+     * Error analysis
+     */
+    PetscInt uMaxErrLoc, vMaxErrLoc, pMaxErrLoc;
+    PetscScalar uMaxErrVal, vMaxErrVal, pMaxErrVal;
 
     // Creating and initializing vectors for holding u and v velocities and pressure
     VecCreate(PETSC_COMM_WORLD, &U); VecSetSizes(U, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(U); VecSet(U, 0);
@@ -309,11 +316,9 @@ int main(int argc, char **args) {
 
     correctVelocity(Uss, Vss, LdPdX, LdPdY, P, dt, uInteriorIndex, vInteriorIndex, U, V);
 
-    PetscReal t = dt, it = 2;
+    PetscReal t = dt, it = 1;
     while (t < tf) {
-        t = it * dt;
-        it++;
-        cout << "time = " << t << endl;
+        VecDuplicate(Us, &Uerr); VecDuplicate(Vs, &Verr); VecDuplicate(P, &Perr);
 
         VecSet(Us, 0); VecSet(Vs, 0);
         VecSet(Uss, 0); VecSet(Vss, 0);
@@ -343,12 +348,29 @@ int main(int argc, char **args) {
                               LVhbar, LVhtilde, LVvbar, LVvtilde, LdVsdX, LdVsdY, nVx, nVy, V, Vs, vInteriorIndex,
                               gamma, dt);
 
+        VecAXPY(UssBoundary, 1.0, Us);
+        VecAXPY(VssBoundary, 1.0, Vs);
+
         KSPSolve(uSolver, UssBoundary, Uss);
         KSPSolve(vSolver, VssBoundary, Vss);
 
         calculatePressure(P, LdUdX, U, LdVdY, V, Lp, dt);
 
         correctVelocity(Uss, Vss, LdPdX, LdPdY, P, dt, uInteriorIndex, vInteriorIndex, U, V);
+
+        VecAXPY(Uerr, -1, Us); VecAbs(Uerr); VecMax(Uerr, &uMaxErrLoc, &uMaxErrVal);
+        VecAXPY(Verr, -1, Vs); VecAbs(Verr); VecMax(Verr, &vMaxErrLoc, &vMaxErrVal);
+        VecAXPY(Perr, -1, P); VecAbs(Perr); VecMax(Perr, &pMaxErrLoc, &pMaxErrVal);
+        VecMax(U, &uMaxErrLoc, &uMaxErrVal);
+        it++;
+        t = it * dt;
+        cout << "time = " << t
+//             << " | " << "uMaxErrVal = " << uMaxErrVal
+//             << " | " << "vMaxErrVal = " << vMaxErrVal
+//             << " | " << "pMaxErrVal = " << pMaxErrVal
+//             << " | " << uMaxErrLoc
+             << " | " << "CFL Number: " << uMaxErrVal * dt / dx
+             << endl;
     }
     // Correct boundaries
     assignBoundaryCondition(U, nUx, nUy,
@@ -368,14 +390,15 @@ int main(int argc, char **args) {
                             vIsNeumannBoundary, vDirichletBoundary,
                             dx, dy,
                             VssBoundary, dt, Re, "V");
-//    writeVec(U);
-//    writeVec(V);
-//    writeVec(P);
+    writeVec(U, "U", "Ufile.m");
+    writeVec(V, "V", "Vfile.m");
+    writeVec(P, "P", "Pfile.m");
 
     /*
      * Destroying vectors
      */
     VecDestroy(&U); VecDestroy(&V); VecDestroy(&P);
+    VecDestroy(&Uerr); VecDestroy(&Verr); VecDestroy(&Perr);
 
     MatDestroy(&LUhbar); MatDestroy(&LUvbar); MatDestroy(&LUhtilde); MatDestroy(&LUvtilde);
     MatDestroy(&LVhbar); MatDestroy(&LVvbar); MatDestroy(&LVhtilde); MatDestroy(&LVvtilde);
@@ -408,22 +431,26 @@ void showMatrixSize(Mat A) {
     cout << "Row size = " << matRow << "\t Column size = " << matColumn << endl;
 }
 
-void writeMat(Mat A) {
+void writeMat(Mat A, string variableName, string fileName) {
     PetscViewer matlabViewer;
 
-    PetscObjectSetName((PetscObject) A, "X_");
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.m", &matlabViewer);
+    const char *myVar = variableName.c_str();
+    const char *myFile = fileName.c_str();
+    PetscObjectSetName((PetscObject) A, myVar);
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, myFile, &matlabViewer);
     PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
+
     MatView(A, matlabViewer);
 
     PetscViewerDestroy(&matlabViewer);
 }
 
-void writeVec(Vec A) {
+void writeVec(Vec A, string variableName, string fileName) {
     PetscViewer matlabViewer;
-
-    PetscObjectSetName((PetscObject) A, "X_");
-    PetscViewerASCIIOpen(PETSC_COMM_WORLD, "operator.m", &matlabViewer);
+    const char *myVar = variableName.c_str();
+    const char *myFile = fileName.c_str();
+    PetscObjectSetName((PetscObject) A, myVar);
+    PetscViewerASCIIOpen(PETSC_COMM_WORLD, myFile, &matlabViewer);
     PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_MATLAB);
 //    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_ASCII_COMMON);
 //    PetscViewerSetFormat(matlabViewer, PETSC_VIEWER_DEFAULT);

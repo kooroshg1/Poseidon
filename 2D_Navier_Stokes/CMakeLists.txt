@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 2.8)
 
 project(NSsolver)
 
-set(CMAKE_MODULE_PATH "/home/koorosh/Tools/cmake_modules_for_petsc")
+set(CMAKE_MODULE_PATH "/home/koorosh/Tools/petsc-3.6.3/cmake_files_for_PETSC")
 set(PETSC_DIR "/home/koorosh/Tools/petsc-3.6.3")
 set(PETSC_ARCH "arch-linux2-c-debug")
 

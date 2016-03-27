@@ -1,50 +1,35 @@
 clear all;
-close all;
+% close all;
 format short g;
-% clc;
+clc;
 % ============================== %
-cd Debug
-cd ..
-% ============================== %
+nx = 100;
+ny = 100;
+ 
+% For U
+nUx = nx + 1; nUy = ny + 2;
+% For V
+nVx = nx + 2; nVy = ny + 1;
+% For P
+nPx = nx; nPy = ny;
+% for Us
+% nx = nx - 1; ny = ny;
+% for Vs
+% nx = nx; ny = ny - 1;
 
-% fid = fopen('Debug/operator.output');
-% 
-% tline = fgetl(fid);
-% tline = fgetl(fid);
-% nx = 5;
-% ny = 3;
-% 
-% % For U and V
-% % nUx = nx + 1; nVx = nx + 2;
-% % nUy = ny + 2; nVy = ny + 1;
-% % for Us and Vs
-% nUx = nx - 1; nVx = nx;
-% nUy = ny; nVy = ny - 1;
-% 
-% U = zeros(nUx * nUy, 1);
-% V = zeros(nVx * nVy, 1);
-% readU = false; readV = true;
-% % readU = true; readV = false;
-% 
-% rowNumber = 1;
-% 
-% if readU
-% while ~feof(fid)
-%     tline = fgetl(fid);
-%     tline = sscanf(tline, '%f');
-%     U(rowNumber) = tline;
-%     rowNumber = rowNumber + 1;
-% end
-% U = reshape(U, nUx, nUy)
-% end
-% 
-% if readV
-% while ~feof(fid)
-%     tline = fgetl(fid);
-%     tline = sscanf(tline, '%f');
-%     V(rowNumber) = tline;
-%     rowNumber = rowNumber + 1;
-% end
-% V = reshape(V, nVx, nVy)
-% end
-% fclose(fid);
+cd Debug
+Ufile; U = reshape(U, nUx, nUy); U = (U(2:end, 2:end-1) + U(1:end-1, 2:end-1)) / 2;
+Vfile; V = reshape(V, nVx, nVy); V = (V(2:end-1, 2:end) + V(2:end-1, 1:end-1)) / 2;
+Pfile; P = reshape(P, nPx, nPy);
+cd ..
+
+lx = 1.0;
+ly = 1.0;
+x = linspace(0, lx, nx);
+y = linspace(0, ly, ny);
+[Y, X] = meshgrid(y, x);
+
+figure(1),
+% contourf(X, Y, U, 50, 'linestyle', 'none')
+hold on
+plot(U(50, :), y, 'k')
