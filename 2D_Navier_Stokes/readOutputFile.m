@@ -1,5 +1,5 @@
-clear all;
-% close all;
+% clear all;
+close all;
 format short g;
 clc;
 % ============================== %
@@ -29,7 +29,7 @@ x = linspace(0, lx, nUx); y = linspace(0, ly, nUy);
 % x = linspace(0, lx, nPx); y = linspace(0, ly, nPy);
 [Y, X] = meshgrid(y, x);
 
-figure(1),
+figure,
 contourf(X, Y, U, 50, 'linestyle', 'none')
 caxis([0, 2])
 colorbar

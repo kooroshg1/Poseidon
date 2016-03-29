@@ -59,7 +59,7 @@ int main(int argc, char **args) {
      * Physical Properties
      */
     PetscReal dt = 0.01; // Time step
-    PetscReal tf = 5.0; // Number of time steps
+    PetscReal tf = 4; // Number of time steps
 
     /*
      * Flow properties
@@ -74,9 +74,9 @@ int main(int argc, char **args) {
      * The dirichlet boundary values are stored in xDirichletBoundary.
      * The order is {S, W, N, E}
      */
-    PetscInt uIsNeumannBoundary[4] = {1, 0, 1, 1};
-    PetscScalar uDirichletBoundary[4] = {0, 1, 0, 0};
-    PetscInt vIsNeumannBoundary[4] = {0, 0, 0, 1};
+    PetscInt uIsNeumannBoundary[4] = {0, 0, 0, 0};
+    PetscScalar uDirichletBoundary[4] = {0, 0, 1, 0};
+    PetscInt vIsNeumannBoundary[4] = {0, 0, 0, 0};
     PetscScalar vDirichletBoundary[4] = {0, 0, 0, 0};
     PetscInt pIsNeumannBoundary[4] = {1, 1, 1, 1};
 
@@ -154,9 +154,9 @@ int main(int argc, char **args) {
     PetscScalar uMaxErrVal, vMaxErrVal, pMaxErrVal;
 
     // Creating and initializing vectors for holding u and v velocities and pressure
-    VecCreate(PETSC_COMM_WORLD, &U); VecSetSizes(U, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(U); VecSet(U, 1);
-    VecCreate(PETSC_COMM_WORLD, &V); VecSetSizes(V, PETSC_DECIDE, nVx * nVy); VecSetFromOptions(V); VecSet(V, 1);
-    VecCreate(PETSC_COMM_WORLD, &P); VecSetSizes(P, PETSC_DECIDE, nx * ny); VecSetFromOptions(P); VecSet(P, 1);
+    VecCreate(PETSC_COMM_WORLD, &U); VecSetSizes(U, PETSC_DECIDE, nUx * nUy); VecSetFromOptions(U); VecSet(U, 0);
+    VecCreate(PETSC_COMM_WORLD, &V); VecSetSizes(V, PETSC_DECIDE, nVx * nVy); VecSetFromOptions(V); VecSet(V, 0);
+    VecCreate(PETSC_COMM_WORLD, &P); VecSetSizes(P, PETSC_DECIDE, nx * ny); VecSetFromOptions(P); VecSet(P, 0);
 
     /*
      * Assign boundary conditions
