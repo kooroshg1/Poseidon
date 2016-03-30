@@ -26,15 +26,10 @@ for i=1:ns
     Dy(i, :) = deltaY;
 end
 
+D
 % (deltaX * X * deltaX') * dx^2
 % (deltaY * Y * deltaY') * dy^2
-xCalc = diag((Dx * X * Dx')) * dx^2;
-yCalc = diag((Dy * Y * Dy')) * dy^2;
 % trapz(x, deltaX)
-
-figure,
-plot(xCalc, yCalc)
-axis('equal')
 
 % figure,
 % plot(x, deltaX)
