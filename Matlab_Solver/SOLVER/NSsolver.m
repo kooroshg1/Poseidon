@@ -9,20 +9,21 @@ addpath('functions/');
 % ----------------------------------------------------------------------- %
 
 %% DEFINE PHYSICAL PROPERTIES AND DOMAIN DIMENSION
-Re = 1e2;           % Reynolds number
-dt = 1e-2;          % time step
-tf = 5.0;           % final time
-xStart = -0.5;      % Domain begining coordinate (x)
-xEnd = 2.5;         % Domain end coordinate (x)
-yStart = -0.5;      % Domain begining coordinate (y)
-yEnd = 0.5;         % Domain end coordinate (y)
-nx = 300;           % number of x-gridpoints
-ny = 100;           % number of y-gridpoints
+Re = 1e2;               % Reynolds number
+dt = 1e-2;              % time step
+tf = 5.0;               % final time
+xStart = -0.5;          % Domain begining coordinate (x)
+xEnd = 2.5;             % Domain end coordinate (x)
+yStart = -0.5;          % Domain begining coordinate (y)
+yEnd = 0.5;             % Domain end coordinate (y)
+nx = 300;               % number of x-gridpoints
+ny = 100;               % number of y-gridpoints
+convCriteria = 1e-3;    % Convergence criteria
 % ----------------------------------------------------------------------- %
 
 %% DEFINE LAGRANGIAN POINTS
 generateCircle(0.0, 0.0, 0.1, 50);
-% generateSquare(0.4, 0.4, 0.6, 0.6, ns);
+% generateSquare(-0.1, -0.1, 0.1, 0.1, 50);
 % generateNozzle(0.3, 0.1, 0.4, 0.0, 0.0, 0.5, 1.5, 0.5, 100)
 % generateAirfoil('naca001234'); 
 % generateAirfoil('naca2408'); 
@@ -136,6 +137,11 @@ Fy = 0;
 fprintf(', time loop\n--20%%--40%%--60%%--80%%-100%%\n')
 tic
 for k = 1:nt
+    %% SAVE VARIABLES FOR CONVERGENCE STUDY
+    Uold = U;
+    Vold = V; 
+    % ------------------------------------------------------------------- %
+    
     %% APPLY BOUNDARY CONDITIONS
     % Free-slip boundary condition on top and bottom walls
     uN(2:end-1) = U(:,end);
@@ -204,7 +210,24 @@ for k = 1:nt
     U = U-diff(P)/hx * dt;
     V = V-diff(P')'/hy * dt;
     % ------------------------------------------------------------------- %
-
+    
+    %% CHECK FOR CONVERGENCE
+    Uerr = abs(U - Uold); Uerr = max(max(Uerr));
+    Verr = abs(V - Vold); Verr = max(max(Verr));
+    if (Uerr < convCriteria) && (Verr < convCriteria)
+        fprintf('\n');
+        fprintf('CONVERGENCE SATISFIED')
+        break;
+    end
+%     figure(1)
+%     subplot(2,1,1)
+%     plot(k, Uerr, 'ko')
+%     hold('on')
+%     subplot(2,1,2)
+%     plot(k, Verr, 'ko')
+%     hold('on')
+    % ------------------------------------------------------------------- %
+    
     %% TIMER
     if floor(25*k/nt)>floor(25*(k-1)/nt), fprintf('.'), end
     % ------------------------------------------------------------------- %
