@@ -179,7 +179,7 @@ for k = 1:nt
     figure(1),
     contourf(Xu, Yu, U, 50, 'linestyle', 'none')
     hold('on')
-    plot(xs, ys, 'k')
+    area(xs, ys)
     hold('off')
     axis('equal')
     % ------------------------------------------------------------------- %
