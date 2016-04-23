@@ -28,8 +28,8 @@ else
 end
 % ----------------------------------------------------------------------- %
 %% DEFINE PHYSICAL PROPERTIES AND DOMAIN DIMENSION
-Re = 1e3;                   % Reynolds number
-dt = 5e-3;                  % time step
+Re = 1e2;                   % Reynolds number
+dt = 1e-2;                  % time step
 tf = 5;                  % final time
 xStart = -0.5;              % Domain begining coordinate (x)
 xEnd = 2.5;                 % Domain end coordinate (x)

@@ -154,13 +154,21 @@ for k = 1:nt
     Fxhist(k) = Fx; Fyhist(k) = Fy;
     
     %% SOLVE DYNAMIC EQUATION OF MOTION
-    if k > 1
-        Xt(:, k) = dt * (A * Xt(:, k - 1) + [0; Fxhist(k)]) + Xt(:, k - 1);
-%         pointCloud(:, 2) = pointCloud(:, 2) + Xt(1, k);
-        pointCloud(:, 2) = pointCloudInitLoc(:, 2) + Xt(1, k);
+    if k > 0
+        %% BACKWARD EULER TIME INTEGRATION
+%         Xt(:, k) = dt * (A * Xt(:, k - 1) + [0; Fxhist(k)] / m) + Xt(:, k - 1);
         
-%         lagrangePointsVelocity(:, 2) = lagrangePointsVelocity(:, 2) + Xt(2, k);
-        lagrangePointsVelocity(:, 2) = lagrangePointsInitVelocity(:, 2) + Xt(2, k);
+        %% ADAMS-BASHFORTH TIME INTEGRATION
+        if k == 1
+            Xt(:, k + 1) = (A * Xt(:, k) + [0; Fxhist(k)] / m) * dt + Xt(:, k);
+        else
+            Xt(:, k + 1) = Xt(:, k) + ...
+                                 dt * (3/2 * A * Xt(:, k) + 3/2 * [0; Fxhist(k)] / m + ...
+                                         -1/2 * A * Xt(:, k) - 1/2 * [0;Fxhist(k - 1)] / m);
+        end
+        
+        pointCloud(:, 2) = pointCloudInitLoc(:, 2) + Xt(1, k + 1);
+        lagrangePointsVelocity(:, 2) = lagrangePointsInitVelocity(:, 2) + Xt(2, k + 1);
         
         dlmwrite('pointCloud.txt', pointCloud);
         dlmwrite('lagrangePointsVelocity.txt', lagrangePointsVelocity);
@@ -187,7 +195,7 @@ for k = 1:nt
     %% PLOT
     % VELOCITY CONTOUR
     figure(1),
-    fileName = ['figures/', num2str(k, '%6d'), '.png'];
+    fileName = ['figures/', num2str(k, '%010d'), '.png'];
     contourf(Xu, Yu, U, 50, 'linestyle', 'none')
     hold('on')
     area(xs, ys)
@@ -203,6 +211,7 @@ for k = 1:nt
     plot(k, Fx, 'ko')
     xlabel('# of iterations')
     ylabel('Fx')
+    title([num2str(k) '/' num2str(nt)])
     hold on
     subplot(1, 2, 2)
     plot(k, Fy, 'ko')
@@ -214,10 +223,12 @@ for k = 1:nt
     % LAGRANGE POINTS VELOCITY
     figure(3),
     subplot(1, 2, 1)
-    plot(mean(lagrangePointsVelocity(:, 2)), 'ko')
+    plot(k, mean(lagrangePointsVelocity(:, 2)), 'ko')
     xlabel('Lagrangian points')
     ylabel('Velocity')
     ylim([-1, 1])
+    title([num2str(k) '/' num2str(nt)])
+    hold on
     subplot(1, 2, 2)
     plot(k, mean(pointCloud(:, 2)), 'ko')
     xlabel('Lagrangian points')
