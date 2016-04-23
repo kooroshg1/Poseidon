@@ -3,7 +3,7 @@
 % close all;
 % format short g;
 % % ======================================================================= %
-function [U, V, P, Fxhist, Fyhist] = NSsolve(x, y, X, Y, alpha, beta, peru, Ru, Rut, perv, Rv, Rvt, perp, Rp, Rpt, initialize, Uinit, Vinit)
+function [U, V, P, Fxhist, Fyhist, Xt] = NSsolve(x, y, X, Y, alpha, beta, peru, Ru, Rut, perv, Rv, Rvt, perp, Rp, Rpt, initialize, Uinit, Vinit)
 if nargin == 16
     fprintf('initializeing with zeros ...\n');
 else
@@ -56,6 +56,11 @@ uVelocity = lagrangePointsVelocity(:, 1);
 vVelocity = lagrangePointsVelocity(:, 2);
 % ----------------------------------------------------------------------- %
 
+%% SAVE INITIAL LOCATION AND VELOCITY OF LAGRANGIAN POINTS
+pointCloudInitLoc = pointCloud;
+lagrangePointsInitVelocity = lagrangePointsVelocity;
+% ----------------------------------------------------------------------- %
+
 %% GENERATE MESH
 [xu, yu, Xu, Yu] = generateMesh('U');
 [xv, yv, Xv, Yv] = generateMesh('V');
@@ -63,7 +68,7 @@ vVelocity = lagrangePointsVelocity(:, 2);
 % ----------------------------------------------------------------------- %
 
 %% STRUCTURAL MODEL
-k = 5.0; m = 0.01; c = 0.0;
+k = 1.0; m = 1.0; c = 0.0;
 A = [0   , 1; ...
 	 -k/m, -c/m];
 Xt = zeros(2, nt);
@@ -151,8 +156,12 @@ for k = 1:nt
     %% SOLVE DYNAMIC EQUATION OF MOTION
     if k > 1
         Xt(:, k) = dt * (A * Xt(:, k - 1) + [0; Fxhist(k)]) + Xt(:, k - 1);
-        pointCloud(:, 2) = pointCloud(:, 2) + Xt(1, k);
-        lagrangePointsVelocity(:, 2) = lagrangePointsVelocity(:, 2) + Xt(2, k);
+%         pointCloud(:, 2) = pointCloud(:, 2) + Xt(1, k);
+        pointCloud(:, 2) = pointCloudInitLoc(:, 2) + Xt(1, k);
+        
+%         lagrangePointsVelocity(:, 2) = lagrangePointsVelocity(:, 2) + Xt(2, k);
+        lagrangePointsVelocity(:, 2) = lagrangePointsInitVelocity(:, 2) + Xt(2, k);
+        
         dlmwrite('pointCloud.txt', pointCloud);
         dlmwrite('lagrangePointsVelocity.txt', lagrangePointsVelocity);
         [Dux, Duy, Dvx, Dvy, Dpx, Dpy] = mappingFunction();
@@ -176,12 +185,46 @@ for k = 1:nt
     % ------------------------------------------------------------------- %
     
     %% PLOT
+    % VELOCITY CONTOUR
     figure(1),
+    fileName = ['figures/', num2str(k, '%6d'), '.png'];
     contourf(Xu, Yu, U, 50, 'linestyle', 'none')
     hold('on')
     area(xs, ys)
     hold('off')
     axis('equal')
+    title([num2str(k) '/' num2str(nt)])
+    colorbar
+    saveas(gcf, fileName)
+
+    % Fx AND Fy ON THE BOUNDARY
+    figure(2),
+    subplot(1, 2, 1)
+    plot(k, Fx, 'ko')
+    xlabel('# of iterations')
+    ylabel('Fx')
+    hold on
+    subplot(1, 2, 2)
+    plot(k, Fy, 'ko')
+    xlabel('# of iterations')
+    ylabel('Fy')
+    title([num2str(k) '/' num2str(nt)])
+    hold on
+    
+    % LAGRANGE POINTS VELOCITY
+    figure(3),
+    subplot(1, 2, 1)
+    plot(mean(lagrangePointsVelocity(:, 2)), 'ko')
+    xlabel('Lagrangian points')
+    ylabel('Velocity')
+    ylim([-1, 1])
+    subplot(1, 2, 2)
+    plot(k, mean(pointCloud(:, 2)), 'ko')
+    xlabel('Lagrangian points')
+    ylabel('Center')
+    ylim([-1, 1])
+    title([num2str(k) '/' num2str(nt)])
+    hold on
     % ------------------------------------------------------------------- %
     
 end

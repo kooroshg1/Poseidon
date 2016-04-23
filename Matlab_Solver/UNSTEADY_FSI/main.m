@@ -2,12 +2,35 @@ clc;
 clear all;
 close all;
 format short g;
+% ----------------------------------------------------------------------- %
 addpath('functions/');
+if exist('output', 'dir')
+    rewriteData = input('Rewrite data?(y/n)', 's');
+    if strcmp(rewriteData, 'y')
+        rmdir('output', 's')
+        mkdir('output')
+    else
+        error('Output folder exists and cannot be removed...')
+    end
+else
+    mkdir('output')
+end
+if exist('figures', 'dir')
+    rewriteData = input('Rewrite figures?(y/n)', 's');
+    if strcmp(rewriteData, 'y')
+        rmdir('figures', 's')
+        mkdir('figures')
+    else
+        error('figures folder exists and cannot be removed...')
+    end
+else
+    mkdir('figures')
+end
 % ----------------------------------------------------------------------- %
 %% DEFINE PHYSICAL PROPERTIES AND DOMAIN DIMENSION
 Re = 1e3;                   % Reynolds number
 dt = 5e-3;                  % time step
-tf = 25;                  % final time
+tf = 5;                  % final time
 xStart = -0.5;              % Domain begining coordinate (x)
 xEnd = 2.5;                 % Domain end coordinate (x)
 yStart = -0.5;              % Domain begining coordinate (y)
@@ -39,7 +62,7 @@ U = zeros(nx - 1, ny) + eps; V = zeros(nx, ny - 1) + eps;
 % ----------------------------------------------------------------------- %
 
 %% DEFINE LAGRANGIAN POINTS
-generateCircle(0.0, 0.1, 0.1, 50);
+generateCircle(0.0, 0.01, 0.1, 50);
 % ----------------------------------------------------------------------- %
 
 %% DEFINE LAGRANGIAN POINTS VELOCITY
@@ -64,15 +87,16 @@ initialize = true;
 if ~initialize
     Uinit = dlmread('U.txt');
     Vinit = dlmread('V.txt');
-    [U, V, P, Fxhist, Fyhist] = NSsolve(x, y, X, Y, alpha, beta, peru, Ru, Rut, perv, Rv, Rvt, perp, Rp, Rpt, initialize, Uinit, Vinit);
+    [U, V, P, Fxhist, Fyhist, Xt] = NSsolve(x, y, X, Y, alpha, beta, peru, Ru, Rut, perv, Rv, Rvt, perp, Rp, Rpt, initialize, Uinit, Vinit);
 else
-    [U, V, P, Fxhist, Fyhist] = NSsolve(x, y, X, Y, alpha, beta, peru, Ru, Rut, perv, Rv, Rvt, perp, Rp, Rpt, initialize);
+    [U, V, P, Fxhist, Fyhist, Xt] = NSsolve(x, y, X, Y, alpha, beta, peru, Ru, Rut, perv, Rv, Rvt, perp, Rp, Rpt, initialize);
 end
-dlmwrite('U.txt', U);
-dlmwrite('V.txt', V);
-dlmwrite('P.txt', P);
-dlmwrite('Fxhist.txt', Fxhist);
-dlmwrite('Fyhist.txt', Fyhist);
+dlmwrite('output/U.txt', U);
+dlmwrite('output/V.txt', V);
+dlmwrite('output/P.txt', P);
+dlmwrite('output/Fxhist.txt', Fxhist);
+dlmwrite('output/Fyhist.txt', Fyhist);
+dlmwrite('output/Xthist.txt', Xt);
 % ----------------------------------------------------------------------- %
 
 %% PLOTING

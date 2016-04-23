@@ -41,11 +41,12 @@ ns = length(xs);
 % ----------------------------------------------------------------------- %
 
 %% READ DATA
-U = dlmread('U.txt');
-V = dlmread('V.txt');
-P = dlmread('P.txt');
-Fxhist = dlmread('Fxhist.txt');
-Fyhist = dlmread('Fyhist.txt');
+U = dlmread('output/U.txt');
+V = dlmread('output/V.txt');
+P = dlmread('output/P.txt');
+Fxhist = dlmread('output/Fxhist.txt');
+Fyhist = dlmread('output/Fyhist.txt');
+Xthist = dlmread('output/Xthist.txt');
 % ----------------------------------------------------------------------- %
 
 Ub = diag(Dux * U * Duy') * hy * hx;
@@ -53,11 +54,10 @@ Vb = diag(Dvx * V * Dvy') * hy * hx;
 Pb = diag(Dpx * P * Dpy') * hy * hx;
 
 % figure,
-% plot(Pb)
+% subplot(1,2,1)
+% plot(t, Fxhist)
+% subplot(1,2,2)
+% plot(t, Fyhist)
+
 figure,
-subplot(1,2,1)
-plot(t, Fxhist)
-ylim([0.07, 0.08])
-xlim([10.0, tf])
-subplot(1,2,2)
-plot(t, Fyhist)
+plot(t, Xthist(2, :))
