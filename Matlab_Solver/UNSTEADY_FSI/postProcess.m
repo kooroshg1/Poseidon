@@ -23,6 +23,27 @@ nt = ceil(tf/dt);
 t = linspace(0, tf, nt);
 % ----------------------------------------------------------------------- %
 
+%% MOVE FIGURE
+% fileList = dir('figures/');
+% try
+%     rmdir('filteredFigures', 's')
+%     mkdir('filteredFigures')
+% catch
+% end
+% fileIndex = 1;
+% for iF = 3:length(fileList)
+%     fileName = fileList(iF).name;
+%     fileName = str2double(fileName(1:end-4));
+%     if rem(fileName, 50) == 1
+%         fileName = [num2str(fileIndex, '%05d'), '.png'];
+%         fileNameSource = ['figures/', fileList(iF).name];
+%         fileNameDestination = ['filteredFigures/', fileName];
+%         fileIndex = fileIndex + 1;
+%         copyfile(fileNameSource, fileNameDestination);
+%     end
+% end
+% ----------------------------------------------------------------------- %
+
 %% DEFINE DELTA FUNCTION (MATRIX) TO MAP RESULTS BETWEEN LAGRANGIAN AND EULERIAN DOMAINS
 [Dux, Duy, Dvx, Dvy, Dpx, Dpy] = mappingFunction();
 % ----------------------------------------------------------------------- %
