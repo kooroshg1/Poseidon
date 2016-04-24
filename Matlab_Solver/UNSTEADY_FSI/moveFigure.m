@@ -24,3 +24,9 @@ Fxhist = dlmread('output/Fxhist.txt');
 Fyhist = dlmread('output/Fyhist.txt');
 Xthist = dlmread('output/Xthist.txt');
 % ----------------------------------------------------------------------- %
+
+figure,
+contourf(Xu, Yu, U)
+hold on
+fill(xs, ys, 'w')
+axis('equal')

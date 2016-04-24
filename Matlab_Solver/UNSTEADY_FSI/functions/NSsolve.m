@@ -71,7 +71,13 @@ lagrangePointsInitVelocity = lagrangePointsVelocity;
 k = 1.0; m = 1.0; c = 0.0;
 A = [0   , 1; ...
 	 -k/m, -c/m];
-Xt = zeros(2, nt);
+Xt = zeros(2, nt + 1);
+% ----------------------------------------------------------------------- %
+
+%% OPEN TEXT FILE FOR WRITING SOLUTION HISTORY
+forceDispHistFile = fopen('output/force_displacement_history.txt','w');
+fprintf(forceDispHistFile,'%-12s %-12s %-12s %-12s %-12s %-12s %-12s\n', 'Iter', 'F_x', 'F_y', '\bar{X}_c', '\bar{Y}_c', 'Y(t)', '\dot{Y}(t)');
+% ----------------------------------------------------------------------- %
 
 %% BEGIN SOLUTION
 if initialize
@@ -156,15 +162,15 @@ for k = 1:nt
     %% SOLVE DYNAMIC EQUATION OF MOTION
     if k > 0
         %% BACKWARD EULER TIME INTEGRATION
-%         Xt(:, k) = dt * (A * Xt(:, k - 1) + [0; Fxhist(k)] / m) + Xt(:, k - 1);
+%         Xt(:, k) = dt * (A * Xt(:, k - 1) + [0; Fyhist(k)] / m) + Xt(:, k - 1);
         
         %% ADAMS-BASHFORTH TIME INTEGRATION
         if k == 1
-            Xt(:, k + 1) = (A * Xt(:, k) + [0; Fxhist(k)] / m) * dt + Xt(:, k);
+            Xt(:, k + 1) = (A * Xt(:, k) + [0; Fyhist(k)] / m) * dt + Xt(:, k);
         else
             Xt(:, k + 1) = Xt(:, k) + ...
-                                 dt * (3/2 * A * Xt(:, k) + 3/2 * [0; Fxhist(k)] / m + ...
-                                         -1/2 * A * Xt(:, k) - 1/2 * [0;Fxhist(k - 1)] / m);
+                                 dt * (3/2 * A * Xt(:, k) + 3/2 * [0; Fyhist(k)] / m + ...
+                                         -1/2 * A * Xt(:, k) - 1/2 * [0;Fyhist(k - 1)] / m);
         end
         
         pointCloud(:, 2) = pointCloudInitLoc(:, 2) + Xt(1, k + 1);
@@ -180,6 +186,7 @@ for k = 1:nt
         uVelocity = lagrangePointsVelocity(:, 1);
         vVelocity = lagrangePointsVelocity(:, 2);
     end
+    % ------------------------------------------------------------------- %
     
     %% TIMER
     if floor(25*k/nt)>floor(25*(k-1)/nt), fprintf('.'), end
@@ -192,54 +199,56 @@ for k = 1:nt
     end
     % ------------------------------------------------------------------- %
     
+    %% WRITE DATA TO TEXT FILE
+    fprintf(forceDispHistFile,'%-12i %-12.4f %-12.4f %-12.4f %-12.4f %-12.4f %-12.4f\n', k, Fx, Fy, mean(pointCloud(:, 1)), mean(pointCloud(:, 2)), Xt(1, k), Xt(2, k));
+    % ------------------------------------------------------------------- %
+    
     %% PLOT
     % VELOCITY CONTOUR
     figure(1),
     fileName = ['figures/', num2str(k, '%010d'), '.png'];
     contourf(Xu, Yu, U, 50, 'linestyle', 'none')
     hold('on')
-    area(xs, ys)
+    fill(xs, ys, 'w')
     hold('off')
     axis('equal')
     title([num2str(k) '/' num2str(nt)])
     colorbar
     saveas(gcf, fileName)
 
-    % Fx AND Fy ON THE BOUNDARY
+    % F_x AND F_y ON THE BOUNDARY
     figure(2),
-    subplot(1, 2, 1)
+    subplot(2, 2, 1)
     plot(k, Fx, 'ko')
     xlabel('# of iterations')
     ylabel('Fx')
     title([num2str(k) '/' num2str(nt)])
     hold on
-    subplot(1, 2, 2)
+    subplot(2, 2, 2)
     plot(k, Fy, 'ko')
     xlabel('# of iterations')
     ylabel('Fy')
     title([num2str(k) '/' num2str(nt)])
-    hold on
-    
+    hold on    
     % LAGRANGE POINTS VELOCITY
-    figure(3),
-    subplot(1, 2, 1)
+    subplot(2, 2, 3)
     plot(k, mean(lagrangePointsVelocity(:, 2)), 'ko')
-    xlabel('Lagrangian points')
+    xlabel('# of iterations')
     ylabel('Velocity')
-    ylim([-1, 1])
     title([num2str(k) '/' num2str(nt)])
     hold on
-    subplot(1, 2, 2)
+    subplot(2, 2, 4)
     plot(k, mean(pointCloud(:, 2)), 'ko')
-    xlabel('Lagrangian points')
+    xlabel('# of iterations')
     ylabel('Center')
-    ylim([-1, 1])
     title([num2str(k) '/' num2str(nt)])
     hold on
-    % ------------------------------------------------------------------- %
-    
+    % ------------------------------------------------------------------- %    
 end
 dlmwrite('fxt.txt', fxt);
 dlmwrite('fyt.txt', fyt);
 fprintf('\n')
+
+%% CLOSE OPENED FILES
+fclose(forceDispHistFile);
 toc
