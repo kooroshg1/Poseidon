@@ -68,7 +68,7 @@ lagrangePointsInitVelocity = lagrangePointsVelocity;
 % ----------------------------------------------------------------------- %
 
 %% STRUCTURAL MODEL
-k = 1.0; m = 1.0; c = 0.0;
+k = 1.0; m = 0.01; c = 0.0;
 A = [0   , 1; ...
 	 -k/m, -c/m];
 Xt = zeros(2, nt + 1);
@@ -203,6 +203,7 @@ for k = 1:nt
     fprintf(forceDispHistFile,'%-12i %-12.4f %-12.4f %-12.4f %-12.4f %-12.4f %-12.4f\n', k, Fx, Fy, mean(pointCloud(:, 1)), mean(pointCloud(:, 2)), Xt(1, k), Xt(2, k));
     % ------------------------------------------------------------------- %
     
+    %{
     %% PLOT
     % VELOCITY CONTOUR
     figure(1),
@@ -244,6 +245,7 @@ for k = 1:nt
     title([num2str(k) '/' num2str(nt)])
     hold on
     % ------------------------------------------------------------------- %    
+    %}
 end
 dlmwrite('fxt.txt', fxt);
 dlmwrite('fyt.txt', fyt);

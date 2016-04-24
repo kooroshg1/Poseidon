@@ -94,5 +94,5 @@ Pb = diag(Dpx * P * Dpy') * hy * hx;
 % subplot(1,2,2)
 % plot(t, Fyhist)
 
-% figure,
-% plot(t, Xthist(2, :))
+figure,
+plot(t, Xthist(2, :))
