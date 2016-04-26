@@ -1,0 +1,2 @@
+Re           dt           tf           xStart       xEnd         yStart       yEnd         nx           ny           convCriteria Nl          
+1000.0000    0.0200       20.0000      0.0000       22.0000      0.0000       4.1000       440          82           0.0000       50          
