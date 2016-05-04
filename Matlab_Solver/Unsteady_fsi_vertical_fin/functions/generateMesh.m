@@ -1,0 +1,41 @@
+% clc;
+% clear all;
+% close all;
+% format short g;
+% % ======================================================================= %
+function [x, y, X, Y] = generateMesh(type)
+if nargin == 0
+    fprintf('Generating mesh ... \n');
+    type = 'C';
+end
+%% READ MESH INFO
+meshInfo = dlmread('information.txt','',1,0);
+Re = meshInfo(1);
+dt = meshInfo(2);
+tf = meshInfo(3);
+xStart = meshInfo(4);
+xEnd = meshInfo(5);
+yStart = meshInfo(6);
+yEnd = meshInfo(7);
+nx = meshInfo(8);
+ny = meshInfo(9);
+convCriteria = meshInfo(10);
+% ----------------------------------------------------------------------- %
+
+if strcmp(type, 'C')
+    x = linspace(xStart, xEnd, nx + 1);
+    y = linspace(yStart, yEnd, ny + 1);
+    [Y,X] = meshgrid(y, x);
+elseif strcmp(type, 'U')
+    x = linspace(xStart, xEnd, nx - 1);
+    y = linspace(yStart, yEnd, ny);
+    [Y, X] = meshgrid(y, x);
+elseif strcmp(type, 'V')
+    x = linspace(xStart, xEnd, nx);
+    y = linspace(yStart, yEnd, ny - 1);
+    [Y, X] = meshgrid(y, x);
+elseif strcmp(type, 'P')
+    x = linspace(xStart, xEnd, nx);
+    y = linspace(yStart, yEnd, ny);
+    [Y, X] = meshgrid(y, x);
+end
